@@ -39,7 +39,7 @@ def query(code):
         return (code, _dict[code])
     # TODO test online API
     # might have broken the online one
-	r = requests.get('http://api.nusmods.com/2016-2017/1/modules/' + code + '/timetable.json')
+	r = requests.get('http://api.nusmods.com/2016-2017/1/modules/' + code.upper() + '/timetable.json')
 	r = r.json()
 	return r
 
