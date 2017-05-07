@@ -2,67 +2,14 @@ import requests
 from sets import Set
 import json
 from z3 import *
-
-ENV = "DEV" # faster to do everything offline, AY16-17S
-
-if ENV == "DEV":
-    _mods = json.load(open('timetable.json'))
-    _dict = {x['ModuleCode']: x['Timetable'] for x in _mods if 'Timetable' in x}
-
-# modjson: json object
-def splitIntoLessonTypes(mod):
-    lessonTypes = Set([i['LessonType'] for i in mod])
-    mydict = {}
-    for i in lessonTypes:
-    	mydict[i] = {}
-    for lst in mod:
-    	tList = timeList(lst["WeekText"], lst["DayText"], lst["StartTime"], lst["EndTime"])
-    	classId = lst['ClassNo']
-    	lType = lst['LessonType']
-    	if classId in mydict[lType].keys():
-    		mydict[lType][classId] = mydict[lType][classId] + tList
-    	else:
-    		mydict[lType][classId] = tList
-    return mydict
-
-# Sample API call:
-# http://api.nusmods.com/2016-2017/1/modules/ST2131/timetable.json
-# returns tuple of (ModuleCode, [{Lessons for each type}])
-def query(code):
-    code = code.upper() # codes are in upper case
-    # if in DEV mode then pull everything from local sources
-    if ENV == "DEV":
-        #return _dict[code]
-        return (code, _dict[code])
-    # TODO test online API
-    # might have broken the online one
-	r = requests.get('http://api.nusmods.com/2016-2017/1/modules/' + code.upper() + '/timetable.json')
-	r = r.json()
-	return r
+import mod_utils
 
 # returns list of hours corresponding to day of the week for even and odd week
 def freeDay(x):
 	day = range(x*24,(x+1)*24)
 	return day + [i+120 for i in day]
-
-# returns list of discrete timeslots based on hour-based indexing in a fortnight
-# used for z3's distinct query. 0-119 first week, 120-239 second week.
-# 24 hours in a day
-def timeList(weektext, daytext, starttime, endtime):
-    #some hard code
-    weekdays = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
-    ofst = weekdays[daytext]*24
-    lst = [i+ofst for i in range(int(starttime)/100, int(endtime)/100)]
-    if (weektext == "Odd Week"):
-        return lst
-    elif (weektext == "Even Week"):
-        return [i+120 for i in lst]
-    # default every week
-    else:
-        return [i+120 for i in lst]+lst
-
-
 # returns selection: list of all lesson slots for us to iterate through the model to find schedule
+
 def parseZ3Query(mods, numToTake, solver = Solver()):
     timetable = [] # contains the symbolic work hours for all mods
     selection = [] # represents all the lecture, rec slots etc
@@ -111,7 +58,8 @@ def timetablePlanner(modsstr, numToTake):
     def transformMod(modtuple):
         return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
     s = Solver()
-    mods = [transformMod(query(m)) for m in modsstr]
+    mods = [mod_utils.queryAndTransform(m) for m in modsstr]
+    print mods
     selection = parseZ3Query(mods, numToTake, s)
     if s.check() == sat:
         print "Candidate Timetable:"
