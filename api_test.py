@@ -39,9 +39,14 @@ def query(code):
         return (code, _dict[code])
     # TODO test online API
     # might have broken the online one
-	r = requests.get('http://api.nusmods.com/2016-2017/1/modules/' + code + '/timetable.json')
+	r = requests.get('http://api.nusmods.com/2016-2017/1/modules/' + code.upper() + '/timetable.json')
 	r = r.json()
 	return r
+
+# returns free day constraint, x is a weekday from 0 to 4
+def freeDay(x):
+	day = range(x*24,(x+1)*24)
+	return day + [i+120 for i in day]
 
 # returns list of discrete timeslots based on hour-based indexing in a fortnight
 # used for z3's distinct query. 0-119 first week, 120-239 second week.
@@ -62,10 +67,17 @@ def transformMod(modtuple):
     return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
 
 # list of (moduleCode, {transformedLessons}) tuples and returns imcomplete z3 query
-def parseZ3Query(mods, solver = Solver(), timetable = [], selection = []):
-    selectionMapping = {} # maps selection to hours
-    for mod in mods:
+def parseZ3Query(mods, numToTake, solver = Solver()):
+    timetable = []
+    selection = []
+    numMods = len(mods)
+    X = [Int("x_%s" % i) for i in range(numToTake)] # creates 5 indicators determining which modules we try
+    solver.add(Distinct(X))
+    solver.add([And(X[i] >= 0, X[i]<numMods) for i in range(numToTake)])
+    for modIndex, mod in enumerate(mods):
         moduleCode = mod[0]
+        constraints = []
+        selected = Or([X[i] == modIndex for i in range(numToTake)]) #is this mod selected
         for lessonType, slots in mod[1].iteritems():
             firstFlag = True
             slotSelectors = []
@@ -84,14 +96,11 @@ def parseZ3Query(mods, solver = Solver(), timetable = [], selection = []):
                 for index, time in enumerate(timing):
                     implicants = [Int('%s_%s_%s' % (moduleCode, lessonType[:3], index)) == time]
                     implication = Implies(selector, And(implicants))
-                    solver.add(implication)
-                solver.add(Or(slotSelectors))
-    # want timetable to be distinct
-    solver.add(Distinct(timetable))
-    return selectionMapping
-
-def freeDayChecker(solver, timetable):
-    print "there is should be something"
+                    constraints.append(implication)
+            constraints.append(Or(Or(slotSelectors),Not(selected))) 
+        # not selected then we don't care, tutorial for a mod we don't choose can be at -1945024 hrs
+        # solver.add(Implies(selected, constraints))
+        solver.add(constraints)
     print timetable
     print "there is should be something above"
     T = BitVec('T', 120)
@@ -116,20 +125,10 @@ def timetableVisualizer(model, selectionMapping):
     binstr = binstr[::-1]  # reverse the string
     print binstr
 
-
-
-def timetablePlanner(modsstr):
+def timetablePlanner(modsstr, numToTake):
     s = Solver()
     mods = [transformMod(query(m)) for m in modsstr]
-    for m in mods:
-        print m
-    selection = [] # selector variables
-    timetable = [] # time assignments
-
-    selectionMapping = parseZ3Query(mods, s, timetable, selection)
-    print "Timetable for:" + str(modsstr)
-    print s.check()
-    print selection
+    selection = parseZ3Query(mods, numToTake, s)
     if s.check() == sat:
         print "Candidate Timetable:"
         m = s.model()
@@ -146,10 +145,10 @@ def timetablePlanner(modsstr):
 def run():
     mod = query('st2131')
     mod = transformMod(mod)
-    parseZ3Query([mod])
+    # parseZ3Query([mod])
 
     # timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r', 'cs2100'])
-    result = timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r'])
+    timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010'], 4)
     # f = open('out.txt', 'w')
     # print >> f, splitIntoLessonTypes(json.load(open('st2131.json')))
     # f2 = open('out2.txt', 'w')
