@@ -3,7 +3,7 @@ from sets import Set
 import json
 from z3 import *
 
-ENV = "DEV" # faster to do everything offline
+ENV = "DEV" # faster to do everything offline, AY16-17S
 
 # ModuleCode -> [Lessons]
 
@@ -62,9 +62,8 @@ def transformMod(modtuple):
     return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
 
 # list of (moduleCode, {transformedLessons}) tuples and returns imcomplete z3 query
-def parseZ3Query(mods, solver = Solver()):
-    timetable = []
-    selection = []
+def parseZ3Query(mods, solver = Solver(), timetable = [], selection = []):
+    selectionMapping = {} # maps selection to hours
     for mod in mods:
         moduleCode = mod[0]
         for lessonType, slots in mod[1].iteritems():
@@ -73,47 +72,84 @@ def parseZ3Query(mods, solver = Solver()):
             for slotName, timing in slots.iteritems():
                 if firstFlag:
                     # add to timetable
-                    timetable += [Int('%s_%s_%s' % (moduleCode, lessonType, index))
+                    timetable += [Int('%s_%s_%s' % (moduleCode, lessonType[:3], index))
                                   for index in range(len(timing))]
                     firstFlag = False
                 selector = Bool('%s_%s_%s' % (moduleCode, lessonType[:3], slotName))
                 selection.append(selector)
                 slotSelectors.append(selector)
+
+                selectionMapping[selector] = timing
+
                 for index, time in enumerate(timing):
-                    implicants = [Int('%s_%s_%s' % (moduleCode, lessonType, index)) == time]
+                    implicants = [Int('%s_%s_%s' % (moduleCode, lessonType[:3], index)) == time]
                     implication = Implies(selector, And(implicants))
                     solver.add(implication)
                 solver.add(Or(slotSelectors))
-    print timetable
     # want timetable to be distinct
     solver.add(Distinct(timetable))
-    return selection
+    return selectionMapping
+
+def freeDayChecker(solver, timetable):
+    print "there is should be something"
+    print timetable
+    print "there is should be something above"
+    T = BitVec('T', 120)
+    prevT = T
+    for index, t in enumerate(timetable):
+        newT = BitVec('T' + str(index), 120)
+        solver.add(newT == prevT | 1 << t)
+        prevT = newT
+
+    # add the free day constraint
+    # freeDayConstraint = Or([])
+
+def timetableVisualizer(model, selectionMapping):
+    timings = [v for k,v in selectionMapping.iteritems() if model[k]]
+    timings = [item for sublist in timings for item in sublist]
+    timings.sort()
+
+    x = 0
+    for i in timings:
+        x |= 1 << i
+    binstr = bin(x)[2:]
+    binstr = binstr[::-1]  # reverse the string
+    print binstr
 
 
 
 def timetablePlanner(modsstr):
     s = Solver()
     mods = [transformMod(query(m)) for m in modsstr]
-    selection = parseZ3Query(mods, s)
-    if s.check() == sat:
-        print "Candidate:"
-        m = s.model()
+    for m in mods:
         print m
+    selection = [] # selector variables
+    timetable = [] # time assignments
+
+    selectionMapping = parseZ3Query(mods, s, timetable, selection)
+    print "Timetable for:" + str(modsstr)
+    print s.check()
+    print selection
+    if s.check() == sat:
+        print "Candidate Timetable:"
+        m = s.model()
+        timetableVisualizer(m, selectionMapping)
         for s in selection:
             if m[s]:
-                print s
+                print str(s) + ' -> ' + str(selectionMapping[s])
     else:
         print "free day not possible"
 
+
 # insert unit tests here, should shift them to a separate file later
+
 def run():
     mod = query('st2131')
     mod = transformMod(mod)
     parseZ3Query([mod])
 
-    print "Some tests"
     # timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r', 'cs2100'])
-    timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r'])
+    result = timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r'])
     # f = open('out.txt', 'w')
     # print >> f, splitIntoLessonTypes(json.load(open('st2131.json')))
     # f2 = open('out2.txt', 'w')
