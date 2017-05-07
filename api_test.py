@@ -62,11 +62,16 @@ def transformMod(modtuple):
     return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
 
 # list of (moduleCode, {transformedLessons}) tuples and returns imcomplete z3 query
-def parseZ3Query(mods, solver = Solver()):
+def parseZ3Query(mods, numToTake, solver = Solver()):
     timetable = []
     selection = []
-    for mod in mods:
+    numMods = len(mods)
+    X = [Int("x_%s" % i) for i in range(numToTake)] # creates 5 indicators determining which modules we try
+    solver.add(Distinct(X))
+    solver.add([And(X[i] >= 0, X[i]<numMods) for i in range(numToTake)])
+    for modIndex, mod in enumerate(mods):
         moduleCode = mod[0]
+        constraints = []
         for lessonType, slots in mod[1].iteritems():
             firstFlag = True
             slotSelectors = []
@@ -82,19 +87,19 @@ def parseZ3Query(mods, solver = Solver()):
                 for index, time in enumerate(timing):
                     implicants = [Int('%s_%s_%s' % (moduleCode, lessonType, index)) == time]
                     implication = Implies(selector, And(implicants))
-                    solver.add(implication)
-                solver.add(Or(slotSelectors))
+                    constraints.append(implication)
+            constraints.append(Or(slotSelectors))
+        selected = Or([X[i] == modIndex for i in range(numToTake)])
+        solver.add(Implies(selected, constraints))
     print timetable
     # want timetable to be distinct
     solver.add(Distinct(timetable))
     return selection
 
-
-
 def timetablePlanner(modsstr):
     s = Solver()
     mods = [transformMod(query(m)) for m in modsstr]
-    selection = parseZ3Query(mods, s)
+    selection = parseZ3Query(mods, 4, s)
     if s.check() == sat:
         print "Candidate:"
         m = s.model()
@@ -109,7 +114,7 @@ def timetablePlanner(modsstr):
 def run():
     mod = query('st2131')
     mod = transformMod(mod)
-    parseZ3Query([mod])
+    # parseZ3Query([mod])
 
     print "Some tests"
     # timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r', 'cs2100'])
