@@ -71,13 +71,15 @@ def parseZ3Query(mods, numToTake, solver = Solver()):
     timetable = []
     selection = []
     numMods = len(mods)
-    X = [Int("x_%s" % i) for i in range(numToTake)] # creates 5 indicators determining which modules we try
+
+    # numMods choose numToTake
+    X = [Int("x_%s" % i) for i in range(numToTake)] # creates indicators determining which modules we try
     solver.add(Distinct(X))
     solver.add([And(X[i] >= 0, X[i]<numMods) for i in range(numToTake)])
     for modIndex, mod in enumerate(mods):
         moduleCode = mod[0]
         constraints = []
-        selected = Or([X[i] == modIndex for i in range(numToTake)]) #is this mod selected
+        selected = Or([X[i] == modIndex for i in range(numToTake)]) # is this mod selected
         for lessonType, slots in mod[1].iteritems():
             firstFlag = True
             slotSelectors = []
@@ -90,28 +92,16 @@ def parseZ3Query(mods, numToTake, solver = Solver()):
                 selector = Bool('%s_%s_%s' % (moduleCode, lessonType[:3], slotName))
                 selection.append(selector)
                 slotSelectors.append(selector)
-
-                selectionMapping[selector] = timing
-
                 for index, time in enumerate(timing):
                     implicants = [Int('%s_%s_%s' % (moduleCode, lessonType[:3], index)) == time]
                     implication = Implies(selector, And(implicants))
                     constraints.append(implication)
-            constraints.append(Or(Or(slotSelectors),Not(selected))) 
+            constraints.append(Or(Or(slotSelectors),Not(selected)))
         # not selected then we don't care, tutorial for a mod we don't choose can be at -1945024 hrs
         # solver.add(Implies(selected, constraints))
         solver.add(constraints)
-    print timetable
-    print "there is should be something above"
-    T = BitVec('T', 120)
-    prevT = T
-    for index, t in enumerate(timetable):
-        newT = BitVec('T' + str(index), 120)
-        solver.add(newT == prevT | 1 << t)
-        prevT = newT
-
-    # add the free day constraint
-    # freeDayConstraint = Or([])
+    solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
+    return selection
 
 def timetableVisualizer(model, selectionMapping):
     timings = [v for k,v in selectionMapping.iteritems() if model[k]]
@@ -132,10 +122,9 @@ def timetablePlanner(modsstr, numToTake):
     if s.check() == sat:
         print "Candidate Timetable:"
         m = s.model()
-        timetableVisualizer(m, selectionMapping)
         for s in selection:
             if m[s]:
-                print str(s) + ' -> ' + str(selectionMapping[s])
+                print s
     else:
         print "free day not possible"
 
