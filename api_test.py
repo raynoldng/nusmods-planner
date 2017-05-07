@@ -37,6 +37,8 @@ def query(code):
     if ENV == "DEV":
         #return _dict[code]
         return (code, _dict[code])
+    # TODO test online API
+    # might have broken the online one
 	r = requests.get('http://api.nusmods.com/2016-2017/1/modules/' + code + '/timetable.json')
 	r = r.json()
 	return r
@@ -62,6 +64,7 @@ def transformMod(modtuple):
 # list of (moduleCode, {transformedLessons}) tuples and returns imcomplete z3 query
 def parseZ3Query(mods, solver = Solver()):
     timetable = []
+    selection = []
     for mod in mods:
         moduleCode = mod[0]
         for lessonType, slots in mod[1].iteritems():
@@ -73,9 +76,10 @@ def parseZ3Query(mods, solver = Solver()):
                     timetable += [Int('%s_%s_%s' % (moduleCode, lessonType, index))
                                   for index in range(len(timing))]
                     firstFlag = False
+                selector = Bool('%s_%s_%s' % (moduleCode, lessonType[:3], slotName))
+                selection.append(selector)
+                slotSelectors.append(selector)
                 for index, time in enumerate(timing):
-                    selector = Bool('%s_%s_%s' % (moduleCode, lessonType[:3], slotName))
-                    slotSelectors.append(selector)
                     implicants = [Int('%s_%s_%s' % (moduleCode, lessonType, index)) == time]
                     implication = Implies(selector, And(implicants))
                     solver.add(implication)
@@ -83,38 +87,33 @@ def parseZ3Query(mods, solver = Solver()):
     print timetable
     # want timetable to be distinct
     solver.add(Distinct(timetable))
-    print solver
-    print solver.check()
+    return selection
 
 
-# list of (moduleCode, {transformedLessons}) tuples and returns imcomplete z3 query
-def parseZ3Query2(mods, solver = Solver()):
-    for mod in mods:
-        moduleCode = mod[0]
-        lessons = mod[1]
-        for lessonType, timings in lessons.iteritems():
-            print lessonType
-            slotSelectors = [Bool('%s_%s_%s' % (moduleCode, lessonType[:3], time)) for time in timings]
-            # print timings for each time slot
-            print [v for k,v in timings.iteritems()]
 
+def timetablePlanner(modsstr):
+    s = Solver()
+    mods = [transformMod(query(m)) for m in modsstr]
+    selection = parseZ3Query(mods, s)
+    if s.check() == sat:
+        print "Candidate:"
+        m = s.model()
+        print m
+        for s in selection:
+            if m[s]:
+                print s
+    else:
+        print "free day not possible"
 
-            # create symbolic variables representing lessonSlots
-            # assumption is that all slots are of the same length
-            lessonSlotLength = len(timings.values()[0])
-            symbolicLessonSlots = [Int('%s_%s%s' % (moduleCode, lessonType[:3], i))
-                                   for i in range(lessonSlotLength)]
-            print symbolicLessonSlots
-
-            # create the implications
-            imps = []
-            
 # insert unit tests here, should shift them to a separate file later
 def run():
     mod = query('st2131')
     mod = transformMod(mod)
-    print mod
     parseZ3Query([mod])
+
+    print "Some tests"
+    # timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r', 'cs2100'])
+    timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r'])
     # f = open('out.txt', 'w')
     # print >> f, splitIntoLessonTypes(json.load(open('st2131.json')))
     # f2 = open('out2.txt', 'w')
