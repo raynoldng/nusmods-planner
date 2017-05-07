@@ -43,6 +43,11 @@ def query(code):
 	r = r.json()
 	return r
 
+# returns free day constraint, x is a weekday from 0 to 4
+def freeDay(x):
+	day = range(x*24,(x+1)*24)
+	return day + [i+120 for i in day]
+
 # returns list of discrete timeslots based on hour-based indexing in a fortnight
 # used for z3's distinct query. 0-119 first week, 120-239 second week.
 def timeList(weektext, daytext, starttime, endtime):
@@ -72,6 +77,7 @@ def parseZ3Query(mods, numToTake, solver = Solver()):
     for modIndex, mod in enumerate(mods):
         moduleCode = mod[0]
         constraints = []
+        selected = Or([X[i] == modIndex for i in range(numToTake)]) #is this mod selected
         for lessonType, slots in mod[1].iteritems():
             firstFlag = True
             slotSelectors = []
@@ -88,18 +94,19 @@ def parseZ3Query(mods, numToTake, solver = Solver()):
                     implicants = [Int('%s_%s_%s' % (moduleCode, lessonType, index)) == time]
                     implication = Implies(selector, And(implicants))
                     constraints.append(implication)
-            constraints.append(Or(slotSelectors))
-        selected = Or([X[i] == modIndex for i in range(numToTake)])
-        solver.add(Implies(selected, constraints))
+            constraints.append(Or(Or(slotSelectors),Not(selected))) 
+        # not selected then we don't care, tutorial for a mod we don't choose can be at -1945024 hrs
+        # solver.add(Implies(selected, constraints))
+        solver.add(constraints)
     print timetable
     # want timetable to be distinct
-    solver.add(Distinct(timetable))
+    solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
     return selection
 
-def timetablePlanner(modsstr):
+def timetablePlanner(modsstr, numToTake):
     s = Solver()
     mods = [transformMod(query(m)) for m in modsstr]
-    selection = parseZ3Query(mods, 4, s)
+    selection = parseZ3Query(mods, numToTake, s)
     if s.check() == sat:
         print "Candidate:"
         m = s.model()
@@ -118,7 +125,7 @@ def run():
 
     print "Some tests"
     # timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r', 'cs2100'])
-    timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r'])
+    timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010'], 4)
     # f = open('out.txt', 'w')
     # print >> f, splitIntoLessonTypes(json.load(open('st2131.json')))
     # f2 = open('out2.txt', 'w')
