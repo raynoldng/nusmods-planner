@@ -5,6 +5,7 @@ from z3 import *
 
 ENV = "DEV" # faster to do everything offline
 
+# ModuleCode -> [Lessons]
 
 ## Helper functions
 if ENV == "DEV":
@@ -13,7 +14,6 @@ if ENV == "DEV":
 
 # modjson: json object
 def splitIntoLessonTypes(mod):
-    #mod = modjson['Timetable']
     lessonTypes = Set([i['LessonType'] for i in mod])
     mydict = {}
     for i in lessonTypes:
@@ -30,55 +30,105 @@ def splitIntoLessonTypes(mod):
     return mydict
 
 # http://api.nusmods.com/2016-2017/1/modules/ST2131/timetable.json
+# returns tuple of (ModuleCode, [{Lessons for each type}])
 def query(code):
-	r = requests.get('http://api.nusmods.com/2016-2017/1/modules/' + code.upper() + '/timetable.json')
+    code = code.upper() # codes are in upper case
+    # if in DEV mode then pull everything from local sources
+    if ENV == "DEV":
+        #return _dict[code]
+        return (code, _dict[code])
+	r = requests.get('http://api.nusmods.com/2016-2017/1/modules/' + code + '/timetable.json')
 	r = r.json()
 	return r
-
-#some hard code
-weekdays = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
 
 # returns list of discrete timeslots based on hour-based indexing in a fortnight
 # used for z3's distinct query. 0-119 first week, 120-239 second week.
 def timeList(weektext, daytext, starttime, endtime):
-	ofst = weekdays[daytext]*24
-	lst = [i+ofst for i in range(int(starttime)/100, int(endtime)/100)]
-	if (weektext == "Odd Week"):
-		return lst
-	elif (weektext == "Even Week"):
-		return [i+120 for i in lst]
-	# default every week
-	else:
-		return [i+120 for i in lst]+lst
-
-
-<<<<<<< variant A
-def queryNUSMODS(code):
-    # if in DEV mode then pull everything from local sources
-    if ENV == "DEV":
-        return _dict[code]
+    #some hard code
+    weekdays = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
+    ofst = weekdays[daytext]*24
+    lst = [i+ofst for i in range(int(starttime)/100, int(endtime)/100)]
+    if (weektext == "Odd Week"):
+        return lst
+    elif (weektext == "Even Week"):
+        return [i+120 for i in lst]
+    # default every week
     else:
-        r = requests.get('http://api.nusmods.com/2014-2015/2/modules/' +  code + '.json')
-        r = r.json()
-        return r
->>>>>>> variant B
-======= end
+        return [i+120 for i in lst]+lst
 
-# print cs1010
-# print cs1010['LessonType']
-# lessonType = Set([i for i in cs1010['LessonType']])
+def transformMod(modtuple):
+    return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
 
-# def printJSON(obj):
-#    print json.dumps(obj, indent=4, sort_keys=True)
+# list of (moduleCode, {transformedLessons}) tuples and returns imcomplete z3 query
+def parseZ3Query(mods, solver = Solver()):
+    timetable = []
+    for mod in mods:
+        moduleCode = mod[0]
+        for lessonType, slots in mod[1].iteritems():
+            firstFlag = True
+            slotSelectors = []
+            for slotName, timing in slots.iteritems():
+                if firstFlag:
+                    # add to timetable
+                    timetable += [Int('%s_%s_%s' % (moduleCode, lessonType, index))
+                                  for index in range(len(timing))]
+                    firstFlag = False
+                for index, time in enumerate(timing):
+                    selector = Bool('%s_%s_%s' % (moduleCode, lessonType[:3], slotName))
+                    slotSelectors.append(selector)
+                    implicants = [Int('%s_%s_%s' % (moduleCode, lessonType, index)) == time]
+                    implication = Implies(selector, And(implicants))
+                    solver.add(implication)
+                solver.add(Or(slotSelectors))
+    print timetable
+    # want timetable to be distinct
+    solver.add(Distinct(timetable))
+    print solver
+    print solver.check()
 
-# print splitIntoLessonTypes(json.load(open('cs1010.json')))
 
-f = open('out.txt', 'w')
+# list of (moduleCode, {transformedLessons}) tuples and returns imcomplete z3 query
+def parseZ3Query2(mods, solver = Solver()):
+    for mod in mods:
+        moduleCode = mod[0]
+        lessons = mod[1]
+        for lessonType, timings in lessons.iteritems():
+            print lessonType
+            slotSelectors = [Bool('%s_%s_%s' % (moduleCode, lessonType[:3], time)) for time in timings]
+            # print timings for each time slot
+            print [v for k,v in timings.iteritems()]
 
-print >> f, splitIntoLessonTypes(json.load(open('st2131.json')))
 
-f2 = open('out2.txt', 'w')
-print >> f2, splitIntoLessonTypes(query('st2131'))
-f2.close()
+            # create symbolic variables representing lessonSlots
+            # assumption is that all slots are of the same length
+            lessonSlotLength = len(timings.values()[0])
+            symbolicLessonSlots = [Int('%s_%s%s' % (moduleCode, lessonType[:3], i))
+                                   for i in range(lessonSlotLength)]
+            print symbolicLessonSlots
 
-f.close()
+            # create the implications
+            imps = []
+            
+# insert unit tests here, should shift them to a separate file later
+def run():
+    mod = query('st2131')
+    mod = transformMod(mod)
+    print mod
+    parseZ3Query([mod])
+    # f = open('out.txt', 'w')
+    # print >> f, splitIntoLessonTypes(json.load(open('st2131.json')))
+    # f2 = open('out2.txt', 'w')
+    # print >> f2, splitIntoLessonTypes(query('st2131'))
+    # f2.close()
+
+    # f.close()
+    #lessons = splitIntoLessonTypes(mod)
+    #print lessons
+
+    #print [Bool('b%s' % i) for i in range(5)]
+
+    #print "\n\nPrinting Z3 bools"
+    #parseZ3Query([lessons])
+
+run()
+
