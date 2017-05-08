@@ -5,6 +5,8 @@ from z3 import *
 
 ENV = "DEV" # faster to do everything offline
 
+# TO DO: no mod is present in both compmods and optmods, and all module codes are valid (i.e. safeguard against dumb user input)
+
 # ModuleCode -> [Lessons]
 
 ## Helper functions
@@ -67,13 +69,21 @@ def transformMod(modtuple):
     return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
 
 # list of (moduleCode, {transformedLessons}) tuples and returns imcomplete z3 query
-def parseZ3Query(mods, numToTake, solver = Solver()):
+def parseZ3Queryv2(compmods, optmods, numToTake, solver = Solver()):
+    complen = len(compmods)
+    if complen > numToTake:
+    	dummy = Int('dummy')
+    	solver.add([dummy<1,dummy>1]) #for unsat
+    	return
     timetable = []
     selection = []
+    mods = compmods + optmods
     numMods = len(mods)
-    X = [Int("x_%s" % i) for i in range(numToTake)] # creates 5 indicators determining which modules we try
-    solver.add(Distinct(X))
-    solver.add([And(X[i] >= 0, X[i]<numMods) for i in range(numToTake)])
+    X = [Int("x_%s" % i) for i in range(numToTake)] # creates indicators determining which modules we try
+    solver.add([X[i]==i for i in range(complen)])
+    solver.add([X[i]<X[i+1] for i in range(numToTake-1)])
+    solver.add(X[0] >= 0)
+    solver.add(X[numToTake-1] < numMods)
     for modIndex, mod in enumerate(mods):
         moduleCode = mod[0]
         constraints = []
@@ -88,6 +98,8 @@ def parseZ3Query(mods, numToTake, solver = Solver()):
                                   for index in range(len(timing))]
                     firstFlag = False
                 selector = Bool('%s_%s_%s' % (moduleCode, lessonType[:3], slotName))
+                constraints.append(Implies(selector,Or([modIndex == X[i] for i in range(numToTake)]))) 
+                #small bug fix here to guarantee selector can only be true when we are taking that mod, otherwise solver could randomly fill up free slot
                 selection.append(selector)
                 slotSelectors.append(selector)
                 for index, time in enumerate(timing):
@@ -98,12 +110,53 @@ def parseZ3Query(mods, numToTake, solver = Solver()):
         # not selected then we don't care, tutorial for a mod we don't choose can be at -1945024 hrs
         # solver.add(Implies(selected, constraints))
         solver.add(constraints)
-    print timetable
+    # print timetable
     # want timetable to be distinct
     solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
     return selection
 
-def timetablePlanner(modsstr, numToTake):
+# old code, but I don't want to deal with versioning if we happen to need this in future - cleanup can be done after completion
+def parseZ3Query(mods, numToTake, solver = Solver()):
+    timetable = []
+    selection = []
+    numMods = len(mods)
+    X = [Int("x_%s" % i) for i in range(numToTake)] # creates indicators determining which modules we try
+    solver.add([X[i]<X[i+1] for i in range(numToTake-1)])
+    solver.add(X[0] >= 0)
+    solver.add(X[numToTake-1] < numMods)
+    for modIndex, mod in enumerate(mods):
+        moduleCode = mod[0]
+        constraints = []
+        selected = Or([X[i] == modIndex for i in range(numToTake)]) #is this mod selected
+        for lessonType, slots in mod[1].iteritems():
+            firstFlag = True
+            slotSelectors = []
+            for slotName, timing in slots.iteritems():
+                if firstFlag:
+                    # add to timetable
+                    timetable += [Int('%s_%s_%s' % (moduleCode, lessonType, index))
+                                  for index in range(len(timing))]
+                    firstFlag = False
+                selector = Bool('%s_%s_%s' % (moduleCode, lessonType[:3], slotName))
+                constraints.append(Implies(selector,Or([modIndex == X[i] for i in range(numToTake)]))) 
+                #small bug fix here to guarantee selector can only be true when we are taking that mod, otherwise solver could randomly fill up free slot
+                selection.append(selector)
+                slotSelectors.append(selector)
+                for index, time in enumerate(timing):
+                    implicants = [Int('%s_%s_%s' % (moduleCode, lessonType, index)) == time]
+                    implication = Implies(selector, And(implicants))
+                    constraints.append(implication)
+            constraints.append(Or(Or(slotSelectors),Not(selected))) 
+        # not selected then we don't care, tutorial for a mod we don't choose can be at -1945024 hrs
+        # solver.add(Implies(selected, constraints))
+        solver.add(constraints)
+    # print timetable
+    # want timetable to be distinct
+    solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
+    return selection
+
+# old code
+def timetablePlanner(modsstr, numToTake = 5):
     s = Solver()
     mods = [transformMod(query(m)) for m in modsstr]
     selection = parseZ3Query(mods, numToTake, s)
@@ -117,6 +170,21 @@ def timetablePlanner(modsstr, numToTake):
     else:
         print "free day not possible"
 
+def timetablePlannerv2(compmodsstr, optmodsstr, numToTake):
+    s = Solver()
+    compmods = [transformMod(query(m)) for m in compmodsstr]
+    optmods = [transformMod(query(m)) for m in optmodsstr]
+    selection = parseZ3Queryv2(compmods, optmods, numToTake, s)
+    if s.check() == sat:
+        print "Candidate:"
+        m = s.model()
+        # print m
+        for s in selection:
+            if m[s]:
+                print s
+    else:
+        print "free day not possible"
+
 # insert unit tests here, should shift them to a separate file later
 def run():
     mod = query('st2131')
@@ -124,14 +192,13 @@ def run():
     # parseZ3Query([mod])
 
     print "Some tests"
-    # timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r', 'cs2100'])
-    timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010'], 4)
+    # timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010', 'cs3230','cs3233'], 5)
+    # timetablePlannerv2([], ['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010', 'cs3230','cs3233'], 5)
+    # timetablePlannerv2(['cs1010'], ['st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010', 'cs3230','cs3233'], 5)
+    timetablePlannerv2(['cs1010','cs1020'], ['st2131', 'cs1231', 'ma1101r','cs2020','cs2010', 'cs3230','cs3233'], 4)
+    # timetablePlannerv2(['cs1010','cs1020','st2131', 'cs1231', 'ma1101r'], ['cs2020','cs2010', 'cs3230','cs3233'], 4)
     # f = open('out.txt', 'w')
     # print >> f, splitIntoLessonTypes(json.load(open('st2131.json')))
-    # f2 = open('out2.txt', 'w')
-    # print >> f2, splitIntoLessonTypes(query('st2131'))
-    # f2.close()
-
     # f.close()
     #lessons = splitIntoLessonTypes(mod)
     #print lessons
