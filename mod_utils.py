@@ -76,7 +76,6 @@ def gotFreeDay(schedule):
         mod, lessonType, slotName = slot.split('_')
         hours += mods[mod][lessonType][slotName]
     hours.sort()
-    print hours
 
     hoursTwoWeeks = [[] for i in range(2 * 5)]
     for h in hours:
@@ -96,5 +95,3 @@ def run():
                     'CS1020_Sectional Teaching_1', 'CS1020_Tutorial_14', 'CS2010_Laboratory_4',
                     'CS2010_Tutorial_8', 'CS2010_Lecture_1']
     print gotFreeDay(testSchedule)
-
-run()

@@ -33,7 +33,7 @@ def parseZ3Query(mods, numToTake, solver = Solver()):
             firstFlag = True
             slotSelectors = [] # selector variable for timeslot
             for slotName, timing in slots.iteritems():
-                www.outlook.comif firstFlag:
+                if firstFlag:
                     timetable += [Int('%s_%s_%s' % (moduleCode, lessonType, index))
                                   for index in range(len(timing))]
                     firstFlag = False
@@ -58,23 +58,16 @@ def timetablePlanner(modsstr, numToTake):
         return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
     s = Solver()
     mods = [mod_utils.queryAndTransform(m) for m in modsstr]
-    print mods
     selection = parseZ3Query(mods, numToTake, s)
     if s.check() == sat:
-     m  print "Candidate Timetable:"
         m = s.model()
         schedule = [str(s) for s in selection if m[s]]
-        freeDays = mod_utils.gotFreeDay(schedule)
-        print schedule
-        print freeDays
         return schedule
-    else:
-        print "free day not possible"
 
 # insert unit tests here, should shift them to a separate file later
 
 def run():
-    timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010'], 5)
-
-run()
-
+    s = timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010'], 5)
+    for i in s:
+        print i
+# run()
