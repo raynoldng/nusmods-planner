@@ -35,7 +35,7 @@ So far nothing doing, still run the python scripts
 - [ ] restructure project
 - [ ] write tests
 - [ ] add documentation on the internal representation
-- [ ] hard and soft constraints for module subset planning
+- [ ] hard and soft constraints for module planning
 
 ## Authors
 

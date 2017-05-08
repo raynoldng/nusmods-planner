@@ -97,4 +97,4 @@ def run():
                     'CS2010_Tutorial_8', 'CS2010_Lecture_1']
     print gotFreeDay(testSchedule)
 
-# run()
+run()
