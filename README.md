@@ -6,7 +6,7 @@ Features:
 
 - free day planner
   - returns a timetable of provided modules that gives a free day
-- timetable planning from subset of provided modules 
+- timetable planning from subset of provided modules
 
 ## Getting Started
 
@@ -21,6 +21,12 @@ cd build
 make sudo make install
 ```
 
+Or you can install it using `pip`
+
+```
+pip install z3-solver
+
+```
 - Python 2.7
 - requests
 
