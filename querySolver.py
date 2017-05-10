@@ -67,7 +67,9 @@ def timetablePlanner(modsstr, numToTake):
 # insert unit tests here, should shift them to a separate file later
 
 def run():
-    s = timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010'], 5)
+    # s = timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010'], 5)
+    s = timetablePlanner(['st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2100'], 5)
     for i in s:
         print i
-# run()
+    print mod_utils.gotFreeDay(s)
+run()

@@ -3,6 +3,7 @@ import requests
 from sets import Set
 import json
 import calendar
+import itertools
 
 ENV = "DEV" # faster to do everything offline, AY16-17S
 
@@ -30,6 +31,16 @@ def query(code):
 # used for z3's distinct query. 0-119 first week, 120-239 second week.
 # 24 hours in a day
 def timeList(weektext, daytext, starttime, endtime):
+    """FIXME! briefly describe function
+
+    :param weektext: 
+    :param daytext: 
+    :param starttime: 
+    :param endtime: 
+    :returns: 
+    :rtype: 
+
+    """
     #some hard code
     weekdays = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
     ofst = weekdays[daytext]*24
@@ -89,9 +100,52 @@ def gotFreeDay(schedule):
                 freeDays.append('Odd ' + calendar.day_name[i % 5])
     return freeDays
 
+def getHours(lesson):
+    """Returns list of hours from lesson slot, e.g. 'ST2131_Lecture_SL1'
+
+    :param lesson: (str) lesson slot of format [module code]_[lesson type]_[lesson code]
+    :returns: list of hours (from 240 hours based indexing)
+    :rtype: list
+
+    """
+    mod, lessonType, slot = lesson.split('_')
+    modJSON = queryAndTransform(mod)[1]
+    return modJSON[lessonType][slot]
+
+def scheduleValid(schedule):
+    """Returns true if schedule is valid, one of each lesson type and no clash
+
+    :param schedule: list of lesson slots taken
+    :returns: true if valid, false otherwise
+    :rtype: Boolean
+
+    """
+    # check if lesson types of each covered
+    mods = Set([s.split('_')[0] for s in schedule])
+    # get jsons of each mods
+    modsJSON = [query(m)[1] for m in mods]
+    allLessonTypes = Set()
+    for mod in mods:
+        modJSON = query(mod)[1]
+        for lesson in modJSON:
+            allLessonTypes.add(mod + '_' + str(lesson['LessonType']))
+
+    # get set of all lesson types in schedule
+    scheduleLessonType = Set(["_".join(l.split('_')[:2]) for l in schedule])
+
+    if len(allLessonTypes.symmetric_difference(scheduleLessonType)) != 0:
+        return False
+
+    # check that all hours are unique
+    hours = [getHours(s) for s in schedule]
+    combinedHours = list(itertools.chain.from_iterable(hours))
+    return len(combinedHours) == len(Set(combinedHours))
+
 def run():
     testSchedule = ['ST2131_Lecture_SL1', 'ST2131_Tutorial_T1', 'MA1101R_Laboratory_B03',
                     'MA1101R_Tutorial_T06', 'MA1101R_Lecture_SL1', 'CS1020_Laboratory_7',
                     'CS1020_Sectional Teaching_1', 'CS1020_Tutorial_14', 'CS2010_Laboratory_4',
                     'CS2010_Tutorial_8', 'CS2010_Lecture_1']
     print gotFreeDay(testSchedule)
+    print scheduleValid(testSchedule)
+

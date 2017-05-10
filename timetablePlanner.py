@@ -7,6 +7,7 @@ mods = sys.argv[2:]
 
 schedule = timetablePlanner(mods, numMods)
 
+print schedule 
 if schedule is not None:
     print "Possible Timetable:"
     for s in schedule:
