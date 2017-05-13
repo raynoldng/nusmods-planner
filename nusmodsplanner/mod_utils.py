@@ -142,6 +142,12 @@ def scheduleValid(schedule):
     return len(combinedHours) == len(Set(combinedHours))
 
 def run():
+    """Sample Usage
+
+    :returns: 
+    :rtype: 
+
+    """
     testSchedule = ['ST2131_Lecture_SL1', 'ST2131_Tutorial_T1', 'MA1101R_Laboratory_B03',
                     'MA1101R_Tutorial_T06', 'MA1101R_Lecture_SL1', 'CS1020_Laboratory_7',
                     'CS1020_Sectional Teaching_1', 'CS1020_Tutorial_14', 'CS2010_Laboratory_4',

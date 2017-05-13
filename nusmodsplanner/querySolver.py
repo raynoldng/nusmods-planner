@@ -64,12 +64,16 @@ def timetablePlanner(modsstr, numToTake):
         schedule = [str(s) for s in selection if m[s]]
         return schedule
 
-# insert unit tests here, should shift them to a separate file later
-
 def run():
+        """Sample usage
+
+        :returns: 
+        :rtype: 
+
+        """
     # s = timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010'], 5)
     s = timetablePlanner(['st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2100'], 5)
     for i in s:
         print i
     print mod_utils.gotFreeDay(s)
-run()
+# run()
