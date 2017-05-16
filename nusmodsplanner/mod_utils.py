@@ -54,27 +54,46 @@ def timeList(weektext, daytext, starttime, endtime):
         return [i+120 for i in lst]+lst
 
 # modjson: json object
-def splitIntoLessonTypes(mod):
-    lessonTypes = Set([i['LessonType'] for i in mod])
-    mydict = {}
-    for i in lessonTypes:
-    	mydict[i] = {}
-    for lst in mod:
-    	tList = timeList(lst["WeekText"], lst["DayText"], lst["StartTime"], lst["EndTime"])
-    	classId = lst['ClassNo']
-    	lType = lst['LessonType']
-    	if classId in mydict[lType].keys():
-    		mydict[lType][classId] = mydict[lType][classId] + tList
-    	else:
-    		mydict[lType][classId] = tList
-    return mydict
+def splitIntoLessonTypes(mod, option = ""):
+	if option == "":
+	    lessonTypes = Set([i['LessonType'] for i in mod])
+	    mydict = {}
+	    for i in lessonTypes:
+	    	mydict[i] = {}
+	    for lst in mod:
+	    	tList = timeList(lst["WeekText"], lst["DayText"], lst["StartTime"], lst["EndTime"])
+	    	classId = lst['ClassNo']
+	    	lType = lst['LessonType']
+	    	if classId in mydict[lType].keys():
+	    		mydict[lType][classId] = mydict[lType][classId] + tList
+	    	else:
+	    		mydict[lType][classId] = tList
+	    return mydict
+	elif option == "includevenues":
+	    lessonTypes = Set([i['LessonType'] for i in mod])
+	    m_dict = {}
+	    for i in lessonTypes:
+	    	m_dict[i] = {}
+	    for lst in mod:
+	    	tList = timeList(lst["WeekText"], lst["DayText"], lst["StartTime"], lst["EndTime"])
+	    	classId = lst['ClassNo']
+	    	lType = lst['LessonType']
+	    	venue = lst['Venue']
+	    	if classId in m_dict[lType].keys():
+	    		m_dict[lType][classId][0] = m_dict[lType][classId][0] + tList
+	    	else:
+	    		m_dict[lType][classId] = [tList, venue]
+	    		# here we are assuming each ClassNo only has one venue, or if they have different venues, they are in the same cluster
+	    return m_dict
+	else:
+		return "unknown option"
 
 def transformMod(modtuple):
     return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
 
-def queryAndTransform(moduleCode):
+def queryAndTransform(moduleCode, option = ""):
     modtuple = query(moduleCode)
-    return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
+    return (modtuple[0], splitIntoLessonTypes(modtuple[1], option))
 
 # takes in a list of slots and returns lists of free days
 def gotFreeDay(schedule):
@@ -154,4 +173,57 @@ def run():
                     'CS2010_Tutorial_8', 'CS2010_Lecture_1']
     print gotFreeDay(testSchedule)
     print scheduleValid(testSchedule)
+
+# first, some hard code for testing, science mapped to 0, arts to 1, computing to 2, utown to 3, etc. does not yet cover all cases.
+# ideally this will eventually be a dictionary so that venuecode retrieval is constant. for generation of this dictionary,
+# we intend to do this recursively, adding all the keys following a certain expression, printing out all venues that are not in dict,
+# finding general expressions for a subset of those, adding them to the dict and so on. this will probably have to be done manually,
+# as the current venue mappings are way too specific (in nusmods API - rawvenues)
+
+def VenueMap(str):
+    ustr = str.upper()
+    if ustr[0] == "S":
+        return 0
+    elif ustr[:2] == "AS":
+        return 1
+    elif ustr[:3] == "COM":
+        return 2
+    elif ustr[:2] == "UT" or ustr[:3] == "ERC":
+    	return 3
+    elif ustr[:2] == "LT": # i know this is wrong but this is just for testing
+    	return 4
+    else:
+        print str
+
+def test(modslist):
+	ttlist = [query(a) for a in modslist]
+	for tt in ttlist:
+		for a in tt[1]:
+			# print a["Venue"]
+			VenueMap(a["Venue"])
+	print VenueMap("wowas6-4")
+
+# returns a dictionary mapping venues to their cluster - 0: Science, 1: Computing/Business/I3, 2: Engineering, 3: Arts, 4: 
+# manual updating is possible
+# intending to slowly update m_dict here using if else and prefix matching, then commenting it out so the process is faster
+def generateVenueCodes(venuepath, dictpath):
+	file = open(venuepath, "r")
+	lines = file.readlines()
+	lines = [r.rstrip().upper() for r in lines]
+	m_dict = json.load(open(dictpath))
+	print m_dict
+	for venue in lines:
+		if venue not in m_dict:
+			pass # add key value pairs to m_dict here
+		else:
+			print venue + ": " + str(m_dict[venue]) # for debugging
+	file2 = open(dictpath, "w") # clears file
+	json.dump(m_dict,file2)
+	file.close()
+	file2.close()
+
+lst = ['st2131', 'cs1010', 'cs2020', 'cs2010', 'cs1020', 'ma1101r', 'ma2101s', 'ma1104']
+test(lst)
+# print queryAndTransform("st2131", "includevenues")
+generateVenueCodes('../data/venues.txt', '../data/venuecodes.json')
 
