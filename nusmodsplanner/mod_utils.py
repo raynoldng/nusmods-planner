@@ -19,29 +19,24 @@ def query(code):
     code = code.upper() # codes are in upper case
     # if in DEV mode then pull everything from local sources
     if ENV == "DEV":
-        #return _dict[code]
         return (code, _dict[code])
     # TODO test online API
-    # might have broken the online one
     r = requests.get('http://api.nusmods.com/2016-2017/1/modules/' + code.upper() + '/timetable.json')
     r = r.json()
     return r
 
-# returns list of discrete timeslots based on hour-based indexing in a fortnight
-# used for z3's distinct query. 0-119 first week, 120-239 second week.
-# 24 hours in a day
 def timeList(weektext, daytext, starttime, endtime):
-    """FIXME! briefly describe function
+    """Returns list of discrete timeslots based on hour-based indexing in a
+    fortnight used for z3's distinct query. 0-119 first week, 120-239 second week. 24 hours in a day
 
-    :param weektext: 
-    :param daytext: 
-    :param starttime: 
-    :param endtime: 
-    :returns: 
-    :rtype: 
+    :param weektext: Odd/Even Week
+    :param daytext: day of the week
+    :param starttime: 24h format
+    :param endtime: 24h format
+    :returns: list of hour slots
+    :rtype: list
 
     """
-    #some hard code
     weekdays = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
     ofst = weekdays[daytext]*24
     lst = [i+ofst for i in range(int(starttime)/100, int(endtime)/100)]
@@ -174,56 +169,17 @@ def run():
     print gotFreeDay(testSchedule)
     print scheduleValid(testSchedule)
 
-# first, some hard code for testing, science mapped to 0, arts to 1, computing to 2, utown to 3, etc. does not yet cover all cases.
-# ideally this will eventually be a dictionary so that venuecode retrieval is constant. for generation of this dictionary,
-# we intend to do this recursively, adding all the keys following a certain expression, printing out all venues that are not in dict,
-# finding general expressions for a subset of those, adding them to the dict and so on. this will probably have to be done manually,
-# as the current venue mappings are way too specific (in nusmods API - rawvenues)
+    def test(modslist):
+        ttlist = [query(a) for a in modslist]
+        for tt in ttlist:
+            for a in tt[1]:
+                # print a["Venue"]
+                VenueMap(a["Venue"])
+        print VenueMap("wowas6-4")
 
-def VenueMap(str):
-    ustr = str.upper()
-    if ustr[0] == "S":
-        return 0
-    elif ustr[:2] == "AS":
-        return 1
-    elif ustr[:3] == "COM":
-        return 2
-    elif ustr[:2] == "UT" or ustr[:3] == "ERC":
-    	return 3
-    elif ustr[:2] == "LT": # i know this is wrong but this is just for testing
-    	return 4
-    else:
-        print str
+    lst = ['st2131', 'cs1010', 'cs2020', 'cs2010', 'cs1020', 'ma1101r', 'ma2101s', 'ma1104']
+    test(lst)
+    # print queryAndTransform("st2131", "includevenues")
+    # generateVenueCodes('../data/venues.txt', '../data/venuecodes.json')
 
-def test(modslist):
-	ttlist = [query(a) for a in modslist]
-	for tt in ttlist:
-		for a in tt[1]:
-			# print a["Venue"]
-			VenueMap(a["Venue"])
-	print VenueMap("wowas6-4")
-
-# returns a dictionary mapping venues to their cluster - 0: Science, 1: Computing/Business/I3, 2: Engineering, 3: Arts, 4: 
-# manual updating is possible
-# intending to slowly update m_dict here using if else and prefix matching, then commenting it out so the process is faster
-def generateVenueCodes(venuepath, dictpath):
-	file = open(venuepath, "r")
-	lines = file.readlines()
-	lines = [r.rstrip().upper() for r in lines]
-	m_dict = json.load(open(dictpath))
-	print m_dict
-	for venue in lines:
-		if venue not in m_dict:
-			pass # add key value pairs to m_dict here
-		else:
-			print venue + ": " + str(m_dict[venue]) # for debugging
-	file2 = open(dictpath, "w") # clears file
-	json.dump(m_dict,file2)
-	file.close()
-	file2.close()
-
-lst = ['st2131', 'cs1010', 'cs2020', 'cs2010', 'cs1020', 'ma1101r', 'ma2101s', 'ma1104']
-test(lst)
-# print queryAndTransform("st2131", "includevenues")
-generateVenueCodes('../data/venues.txt', '../data/venuecodes.json')
 
