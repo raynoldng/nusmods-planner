@@ -163,4 +163,10 @@ def run3():
     s = minTravelQueryv3([], ['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020', 'cs2010', 'ma2108'], 4)
     print t.stop()
 
-run3()
+def run4():
+    t = Timer()
+    t.start()
+    s = noBacktoBackQueryv3([], ['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020', 'cs2010', 'ma2108'], 4)
+    print t.stop()
+
+run4()

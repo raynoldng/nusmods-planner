@@ -90,6 +90,21 @@ def minTravelQueryv3(compmodsstr, optmodsstr, numToTake):
         else:
             print "unsat" + str(i)
 
+def noBacktoBackQueryv3(compmodsstr, optmodsstr, numToTake):
+    s = Solver()
+    compmods = [transformMod(query(m)) for m in compmodsstr]
+    optmods = [transformMod(query(m)) for m in optmodsstr]
+    selection = parseZ3Queryv3(compmods, optmods, numToTake, s, "nobacktoback")
+    if s.check() == sat:
+        print "Candidate:"
+        m = s.model()
+        # print m
+        for s in selection:
+            if m[s]:
+                print s
+    else:
+        print "not possible"
+
 def timetablePlannerv3(compmodsstr, optmodsstr, numToTake):
     s = Solver()
     compmods = [transformMod(query(m)) for m in compmodsstr]
@@ -168,6 +183,10 @@ def parseZ3Queryv3(compmods, optmods, numToTake, solver, option = "freeday", bac
         freeDayConstraint = [Or([And([M[i] == -1 for i in freeDay(j)]) for j in range(5)])]
         # solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
         solver.add(freeDayConstraint)
+
+    if (option == "nobacktoback"):
+        for i in range(239):
+            solver.add(Or(M[i] == -1, M[i+1] == -1, M[i] == M[i+1]))
 
     # print timetable
     # want timetable to be distinct
