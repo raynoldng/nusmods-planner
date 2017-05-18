@@ -50,38 +50,38 @@ def timeList(weektext, daytext, starttime, endtime):
 
 # modjson: json object
 def splitIntoLessonTypes(mod, option = ""):
-	if option == "":
-	    lessonTypes = Set([i['LessonType'] for i in mod])
-	    mydict = {}
-	    for i in lessonTypes:
-	    	mydict[i] = {}
-	    for lst in mod:
-	    	tList = timeList(lst["WeekText"], lst["DayText"], lst["StartTime"], lst["EndTime"])
-	    	classId = lst['ClassNo']
-	    	lType = lst['LessonType']
-	    	if classId in mydict[lType].keys():
-	    		mydict[lType][classId] = mydict[lType][classId] + tList
-	    	else:
-	    		mydict[lType][classId] = tList
-	    return mydict
-	elif option == "includevenues":
-	    lessonTypes = Set([i['LessonType'] for i in mod])
-	    m_dict = {}
-	    for i in lessonTypes:
-	    	m_dict[i] = {}
-	    for lst in mod:
-	    	tList = timeList(lst["WeekText"], lst["DayText"], lst["StartTime"], lst["EndTime"])
-	    	classId = lst['ClassNo']
-	    	lType = lst['LessonType']
-	    	venue = lst['Venue']
-	    	if classId in m_dict[lType].keys():
-	    		m_dict[lType][classId][0] = m_dict[lType][classId][0] + tList
-	    	else:
-	    		m_dict[lType][classId] = [tList, venue]
+    if option == "":
+        lessonTypes = Set([i['LessonType'] for i in mod])
+        mydict = {}
+        for i in lessonTypes:
+            mydict[i] = {}
+        for lst in mod:
+            tList = timeList(lst["WeekText"], lst["DayText"], lst["StartTime"], lst["EndTime"])
+            classId = lst['ClassNo']
+            lType = lst['LessonType']
+            if classId in mydict[lType].keys():
+                mydict[lType][classId] = mydict[lType][classId] + tList
+            else:
+                mydict[lType][classId] = tList
+        return mydict
+    elif option == "includevenues":
+        lessonTypes = Set([i['LessonType'] for i in mod])
+        m_dict = {}
+        for i in lessonTypes:
+           m_dict[i] = {}
+        for lst in mod:
+            tList = timeList(lst["WeekText"], lst["DayText"], lst["StartTime"], lst["EndTime"])
+            classId = lst['ClassNo']
+            lType = lst['LessonType']
+            venue = lst['Venue']
+            if classId in m_dict[lType].keys():
+                m_dict[lType][classId][0] = m_dict[lType][classId][0] + tList
+            else:
+                m_dict[lType][classId] = [tList, venue]
 	    		# here we are assuming each ClassNo only has one venue, or if they have different venues, they are in the same cluster
-	    return m_dict
-	else:
-		return "unknown option"
+        return m_dict
+    else:
+        return "unknown option"
 
 def transformMod(modtuple):
     return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
