@@ -9,7 +9,7 @@ def freeDay(x):
 	return day + [i+120 for i in day]
 
 # stable
-def parseZ3Queryv2(compmods, optmods, numToTake, solver = Solver()):
+def parseZ3Queryv2(numToTake, compmods = [], optmods = [], solver = Solver()):
     complen = len(compmods)
     if complen > numToTake:
     	dummy = Int('dummy')
@@ -56,11 +56,11 @@ def parseZ3Queryv2(compmods, optmods, numToTake, solver = Solver()):
     return selection
 
 # stable
-def timetablePlannerv2(compmodsstr, optmodsstr, numToTake):
+def timetablePlannerv2(numToTake, compmodsstr = [], optmodsstr = []):
     s = Solver()
     compmods = [transformMod(query(m)) for m in compmodsstr]
     optmods = [transformMod(query(m)) for m in optmodsstr]
-    selection = parseZ3Queryv2(compmods, optmods, numToTake, s)
+    selection = parseZ3Queryv2(numToTake, compmods, optmods, s)
     if s.check() == sat:
         print "Candidate:"
         m = s.model()
@@ -72,12 +72,12 @@ def timetablePlannerv2(compmodsstr, optmodsstr, numToTake):
         print "free day not possible"
 
 
-def minTravelQueryv3(compmodsstr, optmodsstr, numToTake):
+def minTravelQueryv3(numToTake, compmodsstr = [], optmodsstr = []):
     for i in range(10):
         s = Solver()
         compmods = [transformMod(query(m)) for m in compmodsstr]
         optmods = [transformMod(query(m)) for m in optmodsstr]
-        selection = parseZ3Queryv3(compmods, optmods, numToTake, s, "mintravel", i)
+        selection = parseZ3Queryv3(numToTake, compmods, optmods, s, "mintravel", i)
         if s.check() == sat:
             print "Candidate:"
             m = s.model()
@@ -90,11 +90,11 @@ def minTravelQueryv3(compmodsstr, optmodsstr, numToTake):
         else:
             print "unsat" + str(i)
 
-def noBacktoBackQueryv3(compmodsstr, optmodsstr, numToTake):
+def noBacktoBackQueryv3(numToTake, compmodsstr = [], optmodsstr = []):
     s = Solver()
     compmods = [transformMod(query(m)) for m in compmodsstr]
     optmods = [transformMod(query(m)) for m in optmodsstr]
-    selection = parseZ3Queryv3(compmods, optmods, numToTake, s, "nobacktoback")
+    selection = parseZ3Queryv3(numToTake, compmods, optmods, s, "nobacktoback")
     if s.check() == sat:
         print "Candidate:"
         m = s.model()
@@ -105,11 +105,11 @@ def noBacktoBackQueryv3(compmodsstr, optmodsstr, numToTake):
     else:
         print "not possible"
 
-def timetablePlannerv3(compmodsstr, optmodsstr, numToTake):
+def timetablePlannerv3(numToTake, compmodsstr = [], optmodsstr = []):
     s = Solver()
     compmods = [transformMod(query(m)) for m in compmodsstr]
     optmods = [transformMod(query(m)) for m in optmodsstr]
-    selection = parseZ3Queryv3(compmods, optmods, numToTake, s)
+    selection = parseZ3Queryv3(numToTake, compmods, optmods, s)
     if s.check() == sat:
         print "Candidate:"
         m = s.model()
@@ -121,15 +121,16 @@ def timetablePlannerv3(compmodsstr, optmodsstr, numToTake):
         print "free day not possible"
 
 # including option, which can be set to freday or mintravel for now
-def parseZ3Queryv3(compmods, optmods, numToTake, solver, option = "freeday", backtoback = 0):
-    complen = len(compmods)
+def parseZ3Queryv3(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver(),
+                   option = "freeday", backtoback = 0):
+    complen = len(compmodsstr)
     if complen > numToTake:
         dummy = Int('dummy')
         solver.add([dummy<1,dummy>1]) #for unsat
         return
     timetable = []
     selection = []
-    mods = compmods + optmods
+    mods = compmodsstr + optmodsstr
     numMods = len(mods)
 
 
@@ -170,16 +171,17 @@ def parseZ3Queryv3(compmods, optmods, numToTake, solver, option = "freeday", bac
                     implication = Implies(selector, And(implicants))
                     constraints.append(implication)
 
-                    venueImplicant = Implies(selector, M[time] == modIndex) # replace modIndex with getVenueCode(slotName) when venue mapping is out
+                    # replace modIndex with getVenueCode(slotName) when venue mapping is out
+                    venueImplicant = Implies(selector, M[time] == modIndex)
                     constraints.append(venueImplicant)
 
-            constraints.append(Or(Or(slotSelectors),Not(selected))) 
+            constraints.append(Or(Or(slotSelectors),Not(selected)))
         # not selected then we don't care, tutorial for a mod we don't choose can be at -1945024 hrs
         # solver.add(Implies(selected, constraints)
 
         solver.add(constraints)
 
-    if (option == "freeday"): 
+    if (option == "freeday"):
         freeDayConstraint = [Or([And([M[i] == -1 for i in freeDay(j)]) for j in range(5)])]
         # solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
         solver.add(freeDayConstraint)

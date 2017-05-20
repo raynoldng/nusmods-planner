@@ -1,4 +1,7 @@
-import requests
+'''NUS Mods Planner, for constraint based timetable planning
+
+'''
+# import requests
 from stopwatch import *
 from sets import Set
 import json
@@ -13,8 +16,8 @@ def freeDay(x):
 # returns selection: list of all lesson slots for us to iterate through the model to find schedule
 
 def parseZ3Query(mods, numToTake, solver = Solver()):
-    timetable = [] # contains the symbolic work hours for all mods
-    selection = [] # represents all the lecture, rec slots etc
+    timetable = [] # contains the symbolic work hours for all mods' lesson hours
+    selection = [] # represents all the lecture, rec slots etc, true if selected
     numMods = len(mods)
 
     # numMods choose numToTake
@@ -49,124 +52,20 @@ def parseZ3Query(mods, numToTake, solver = Solver()):
                     implication = Implies(selector, And(implicants))
                     constraints.append(implication)
             # pick one timeslot from each timeslot, or ignore if mod is not chosen
-            constraints.append(Or(Or(slotSelectors),Not(selected)))
+            constraints.append(Or(Or(slotSelectors), Not(selected)))
         # not selected then we don't care, tutorial for a mod we don't choose can be at -1945024 hrs
         solver.add(constraints)
     solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
     return selection
 
-def timetablePlanner(modsstr, numToTake):
+# TODO use the optsMosStr parameter
+def timetablePlanner(numToTake, compModsStr, optModsStr = []):
     def transformMod(modtuple):
         return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
     s = Solver()
-    mods = [mod_utils.queryAndTransform(m) for m in modsstr]
+    mods = [mod_utils.queryAndTransform(m) for m in compModsStr]
     selection = parseZ3Query(mods, numToTake, s)
     if s.check() == sat:
         m = s.model()
         schedule = [str(s) for s in selection if m[s]]
         return schedule
-
-
-def minTravelOptimize(mods, opt = Optimize()):
-
-    # map mods to and
-    modID = {m[0]: i + 1 for i, m in enumerate(mods)}
-    timetable = [Int('H%s' % i) for i in range(5 * 24 * 2)]
-
-    timetableRestrictions = And([t >= 0 for t in timetable])
-
-    lessonSlotSelectors = [[[('%s_%s_%s' % (m[0], lessonType[:3], slotName), timings) for slotName, timings in slots.iteritems()]
-            for lessonType, slots in m[1].iteritems()] for m in mods]
-
-    timeImplications = []
-    for lessonType in lessonSlotSelectors:
-        for slots in lessonType:
-            for slot in slots:
-                name, timings = slot
-                # print name + ' -> ' + str(timings)
-                modID[name.split('_')[0]]
-                for t in timings:
-                    timeImplications.append(Implies(Bool(name), timetable[t] == modID[name.split('_')[0]]))
-    print timeImplications
-
-
-    slotSelectorImplications = []
-    lessonTypesNames = [[['%s_%s_%s' % (m[0], lessonType[:3], slotName) for slotName, timings in slots.iteritems()]
-            for lessonType, slots in m[1].iteritems()] for m in mods]
-
-    for m in lessonTypesNames:
-        for lessonTypeSlots in m:
-            slotSelectorImplications.append(Or([Bool(l) for l in lessonTypeSlots]))
-    print slotSelectorImplications
-
-    # compute total distance
-    costs = [Int('cost_%s' % i) for i in range(5 * 24 * 2)]
-    costConstraints = [costs[0] == 0] # start with cost 0
-    for i, cost in enumerate(costs[1:]):
-        curLoc = timetable[i]
-        prevLoc = timetable[i-1]
-
-        prevCost = costs[i-1]
-        # we only incur travelling cost if we move 
-        costConstraints.append(cost == If(curLoc == prevLoc, prevCost, prevCost + 1))
-
-    # now add everything together
-    opt.add(timetableRestrictions)
-    opt.add(timeImplications)
-    opt.add(slotSelectorImplications)
-    opt.add(costConstraints)
-
-    opt.minimize(costs[-1])
-    print opt.check()
-
-    m = opt.model()
-    print m
-    for m in lessonTypesNames:
-        for lessonTypeSlots in m:
-            for l in lessonTypeSlots:
-                temp = Bool(l)
-                print temp
-                #print m[temp]
-
-# Wei Heng's version
-def minTravelQuery(modsstr):
-    def transformMod(modtuple):
-        return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
-
-    mods = [mod_utils.queryAndTransform(m) for m in modsstr]
-    opt = Optimize()
-    selection = minTravelOptimize(mods, opt)
-    # if s.check() == sat:
-    #     m = s.model()
-    #     schedule = [str(s) for s in selection if m[s]]
-    #     return schedule
-
-def run():
-    t = Timer()
-    t.start()
-    s = timetablePlanner(['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020','cs1020','cs2010'], 5)
-    for i in s:
-        print i
-    print mod_utils.gotFreeDay(s)
-    print t.stop()
-
-
-def run2():
-    t = Timer()
-    t.start()
-    s = timetablePlannerv3([], ['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020', 'cs2010', 'ma2108'], 4)
-    print t.stop()
-
-def run3():
-    t = Timer()
-    t.start()
-    s = minTravelQueryv3([], ['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020', 'cs2010', 'ma2108'], 4)
-    print t.stop()
-
-def run4():
-    t = Timer()
-    t.start()
-    s = noBacktoBackQueryv3([], ['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020', 'cs2010', 'ma2108'], 4)
-    print t.stop()
-
-run4()
