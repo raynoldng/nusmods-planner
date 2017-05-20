@@ -4,11 +4,13 @@ from sets import Set
 import json
 import calendar
 import itertools
-
+import os
+from definitions import ROOT_DIR
 ENV = "DEV" # faster to do everything offline, AY16-17S
 
 if ENV == "DEV":
-    _mods = json.load(open('../data/timetable.json'))
+    pathToData = os.path.join(ROOT_DIR, '../data/timetable.json')
+    _mods = json.load(open(pathToData))
     _dict = {x['ModuleCode']: x['Timetable'] for x in _mods if 'Timetable' in x}
 
 
