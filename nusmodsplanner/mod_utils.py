@@ -6,6 +6,7 @@ import calendar
 import itertools
 import os
 from definitions import ROOT_DIR
+from z3 import *
 ENV = "DEV" # faster to do everything offline, AY16-17S
 
 if ENV == "DEV":
@@ -91,6 +92,16 @@ def transformMod(modtuple):
 def queryAndTransform(moduleCode, option = ""):
     modtuple = query(moduleCode)
     return (modtuple[0], splitIntoLessonTypes(modtuple[1], option))
+
+def outputFormatter(model, numToTake, modlst):
+    for i in range(numToTake):
+        modIndex = model[Int("x_%s" % i)].as_long()
+        mod = modlst[modIndex]
+        moduleCode = mod[0]
+        for lessonType, slots in mod[1].iteritems():
+            chosenSlot = model[Int('%s_%s' % (moduleCode, lessonType[:3]))].as_long()
+            slotName = slots[chosenSlot][0]
+            print "%s_%s_%s" % (moduleCode, lessonType[:3], slotName)
 
 # takes in a list of slots and returns lists of free days
 def gotFreeDay(schedule):

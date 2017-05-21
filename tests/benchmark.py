@@ -36,8 +36,17 @@ def run4():
     s = noBacktoBackQueryv3(4, [], ['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020',
                                     'cs2010', 'ma2108'])
 
+def run5():
+    s = generalQueryv4(4, [], ['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020',
+                                   'cs2010', 'ma2108'], "freeday")
+
+def run6():
+    s = generalQueryv4(4, [], ['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020',
+                                   'cs2010', 'ma2108'], "nobacktoback")
+
 def runAllTests():
-    func = [run1, run2, run3, run4]
+    #func = [run1, run2, run3, run4, run5]
+    func = [run5, run6]
     for f in func:
         benchmark(f)
 

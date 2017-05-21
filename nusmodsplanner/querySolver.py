@@ -15,57 +15,94 @@ def freeDay(x):
     return day + [i+120 for i in day]
 # returns selection: list of all lesson slots for us to iterate through the model to find schedule
 
-def parseZ3Query(mods, numToTake, solver = Solver()):
-    timetable = [] # contains the symbolic work hours for all mods' lesson hours
-    selection = [] # represents all the lecture, rec slots etc, true if selected
+# overhaul of query method
+def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver(),
+                   option = "freeday", backtoback = 0):
+    complen = len(compmodsstr)
+    if complen > numToTake:
+        dummy = Int('dummy')
+        solver.add([dummy<1,dummy>1]) #for unsat
+        return
+    timetable = []
+    selection = []
+    mods = compmodsstr + optmodsstr
     numMods = len(mods)
 
-    # numMods choose numToTake
-    # creates indicators determining which modules we try
-    X = [Int("x_%s" % i) for i in range(numToTake)]
-    # assert that mods are distinct and have legal indices
-    solver.add(Distinct(X))
-    solver.add([And(X[i] >= 0, X[i]<numMods) for i in range(numToTake)])
+
+    X = [Int("x_%s" % i) for i in range(numToTake)] # creates indicators determining which modules we try
+    solver.add([X[i]==i for i in range(complen)])
+    solver.add([X[i]<X[i+1] for i in range(numToTake-1)])
+    solver.add(X[0] >= 0)
+    solver.add(X[numToTake-1] < numMods)
+
+    M = [Int("m_%s" % i) for i in range(240)] # tells us which modules we are taking during each hour
+    if (option == "mintravel"):
+        Costs = [Int("cost_%s" % i) for i in range(239)]
+        for i in range(239):
+            solver.add(Costs[i] == If(Or(M[i] == -1, M[i+1] == -1, M[i] == M[i+1]), 0, 1))
+            solver.add(Sum(Costs) == backtoback)
 
     for modIndex, mod in enumerate(mods):
         moduleCode = mod[0]
         constraints = []
-        selected = Or([X[i] == modIndex for i in range(numToTake)]) # is this mod selected
-
-        # iterate through all timeslots and parse the implications
-        # Each hours of the timeslot is represented as one z3 IntSort
+        selected = Or([X[i] == modIndex for i in range(numToTake)]) #is this mod selected
         for lessonType, slots in mod[1].iteritems():
-            firstFlag = True
-            slotSelectors = [] # selector variable for timeslot
-            for slotName, timing in slots.iteritems():
-                if firstFlag:
-                    timetable += [Int('%s_%s_%s' % (moduleCode, lessonType, index))
-                                  for index in range(len(timing))]
-                    firstFlag = False
-                selector = Bool('%s_%s_%s' % (moduleCode, lessonType, slotName))
-                selection.append(selector)
-                slotSelectors.append(selector)
-                # add implications if particular timeslot is selected
+            numSlots = len(slots)
+            chosenSlot = Int('%s_%s' % (moduleCode, lessonType[:3]))
+            constraints.append(Implies(selected, And(chosenSlot >= 0, chosenSlot < numSlots)))
+            # timetable += [Int('%s_%s_%s' % (moduleCode, lessonType, index)) for index in range(len(timing))]
+            for slotIndex, (slotName, timing) in enumerate(slots):
+                slotSelected = (chosenSlot == slotIndex)
                 for index, time in enumerate(timing):
-                    # it is fine to repeat variable names, z3 maps to the same variable
-                    implicants = [Int('%s_%s_%s' % (moduleCode, lessonType, index)) == time]
-                    implication = Implies(selector, And(implicants))
-                    constraints.append(implication)
-            # pick one timeslot from each timeslot, or ignore if mod is not chosen
-            constraints.append(Or(Or(slotSelectors), Not(selected)))
-        # not selected then we don't care, tutorial for a mod we don't choose can be at -1945024 hrs
-        solver.add(constraints)
-    solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
-    return selection
+                    # implicants = [Int('%s_%s_%s' % (moduleCode, lessonType, index)) == time]
+                    # implication = Implies(slotSelected, And(implicants))
+                    # constraints.append(implication)
 
-# TODO use the optsMosStr parameter
-def timetablePlanner(numToTake, compModsStr, optModsStr = []):
-    def transformMod(modtuple):
-        return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
+                    # replace modIndex with getVenueCode(slotName) when venue mapping is out
+                    venueImplicant = Implies(slotSelected, M[time] == modIndex)
+                    constraints.append(venueImplicant)
+
+        solver.add(constraints)
+
+    if (option == "freeday"):
+        freeDayConstraint = [Or([And([M[i] == -1 for i in freeDay(j)]) for j in range(5)])]
+        # solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
+        solver.add(freeDayConstraint)
+
+    if (option == "nobacktoback"):
+        for i in range(239):
+            solver.add(Or(M[i] == -1, M[i+1] == -1, M[i] == M[i+1]))
+
+
+def timetablePlannerv4(numToTake, compmodsstr = [], optmodsstr = []):
     s = Solver()
-    mods = [mod_utils.queryAndTransform(m) for m in compModsStr]
-    selection = parseZ3Query(mods, numToTake, s)
+    compmods = [transformMod(query(m)) for m in compmodsstr]
+    optmods = [transformMod(query(m)) for m in optmodsstr]
+    # transfomrs slotname to timing mappings into list of tuples (s,t) instead
+    complst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in compmods]
+    optlst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in optmods]
+    modlst = complst + optlst
+    parseZ3Queryv4(numToTake, complst, optlst, s)
     if s.check() == sat:
+        print "Candidate:"
         m = s.model()
-        schedule = [str(s) for s in selection if m[s]]
-        return schedule
+        outputFormatter(m, numToTake, modlst)
+    else:
+        print "free day not possible"
+
+# option can be freeday or nobacktoback
+def generalQueryv4(numToTake, compmodsstr = [], optmodsstr = [], option = "freeday"):
+    s = Solver()
+    compmods = [transformMod(query(m)) for m in compmodsstr]
+    optmods = [transformMod(query(m)) for m in optmodsstr]
+    # transfomrs slotname to timing mappings into list of tuples (s,t) instead
+    complst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in compmods]
+    optlst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in optmods]
+    modlst = complst + optlst
+    parseZ3Queryv4(numToTake, complst, optlst, s, option)
+    if s.check() == sat:
+        print "Candidate:"
+        m = s.model()
+        outputFormatter(m, numToTake, modlst)
+    else:
+        print "free day not possible"
