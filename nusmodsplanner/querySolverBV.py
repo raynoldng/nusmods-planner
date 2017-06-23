@@ -45,7 +45,7 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
         selected = Or([X[i] == modIndex for i in range(numToTake)]) #is this mod selected
         for lessonType, slots in mod[1].iteritems():
             numSlots = len(slots)
-            chosenSlot = BitVec('%s_%s' % (moduleCode, lessonType[:3]), 16)
+            chosenSlot = BitVec('%s_%s' % (moduleCode, lessonType), 16)
             constraints.append(Implies(selected, And(chosenSlot >= 0, chosenSlot < numSlots)))
             # timetable += [Int('%s_%s_%s' % (moduleCode, lessonType, index))
             # for index in range(len(timing))]
@@ -95,10 +95,13 @@ def outputFormatter(model, numToTake, modlst):
         modIndex = model[BitVec("x_%s" % i, 16)].as_long()
         mod = modlst[modIndex]
         moduleCode = mod[0]
+        # print "Module: %s" % moduleCode
         for lessonType, slots in mod[1].iteritems():
-            chosenSlot = model[BitVec('%s_%s' % (moduleCode, lessonType[:3]), 16)].as_long()
+            # print "All lesson slots: %s" % slots
+            chosenSlot = model[BitVec('%s_%s' % (moduleCode, lessonType), 16)].as_long()
+            print "module code: %s, lesson: %s, model: %s" % (moduleCode, lessonType, chosenSlot)
             slotName = slots[chosenSlot][0]
-            print "%s_%s_%s" % (moduleCode, lessonType[:3], slotName)
+            print "%s_%s_%s" % (moduleCode, lessonType, slotName)
 
 def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):
     v = (Ast * 0)()
@@ -120,17 +123,29 @@ def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], option = "freeday")
     optlst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in optmods]
     modlst = complst + optlst
     parseZ3Queryv4(numToTake, complst, optlst, s, option)
-    return toSMT2Benchmark(s)
+    # return toSMT2Benchmark(s)
+    return [toSMT2Benchmark(s), modsListToLessonMapping(compmods + optmods)]
 
 
 def generalQueryv4(numToTake, compmodsstr = [], optmodsstr = [], option = "freeday"):
     s = Solver()
     compmods = [transformMod(query(m)) for m in compmodsstr]
     optmods = [transformMod(query(m)) for m in optmodsstr]
+    
+    
     # transfomrs slotname to timing mappings into list of tuples (s,t) instead
     complst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in compmods]
     optlst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in optmods]
     modlst = complst + optlst
+    # print modlst
+
+    # prepare list of mod -> lessons -> slots
+    opt = {i[0]: {k:v.keys() for k, v in i[1].items()} for i in optmods}
+    comp = {i[0]: {k:v.keys() for k, v in i[1].items()} for i in compmods}
+    modMappings = opt.copy()
+    modMappings.update(comp)
+    print modMappings
+
     parseZ3Queryv4(numToTake, complst, optlst, s, option)
     if s.check() == sat:
         print "Candidate:"
@@ -139,8 +154,8 @@ def generalQueryv4(numToTake, compmodsstr = [], optmodsstr = [], option = "freed
     else:
         print "free day not possible"
     # print out the smtlib2 syntax of query
-    print "Here is the output"
-    print toSMT2Benchmark(s)
+    # print "Here is the output"
+    # print toSMT2Benchmark(s)
 
 
 '''
@@ -148,4 +163,4 @@ s = parseQuery(4, [], ['cs1010', 'st2131', 'cs1231', 'ma1101r','cs2020',
                                 'cs2010', 'ma2108'], "freeday")
 '''
 
-# s = parseQuery(4, [], ['CS1010', 'CS2020', 'CS2100', 'MA1102R', 'CS1231'], "freeday")
+# s = generalQueryv4(4, [], ["CS1020", "CS1231", "CS2020", "CS2100", "CS2105", "MA1101R", "ST2131"], "freeday")

@@ -14,7 +14,10 @@ if ENV == "DEV":
     _mods = json.load(open(pathToData))
     _dict = {x['ModuleCode']: x['Timetable'] for x in _mods if 'Timetable' in x}
 
-
+def modsListToLessonMapping(transformedModsLst):
+    # prepare list of mod -> lessons -> slots
+    val = {i[0]: {k:v.keys() for k, v in i[1].items()} for i in transformedModsLst}
+    return val
 # Sample API call:
 # http://api.nusmods.com/2016-2017/1/modules/ST2131/timetable.json
 # returns tuple of (ModuleCode, [{Lessons for each type}])
