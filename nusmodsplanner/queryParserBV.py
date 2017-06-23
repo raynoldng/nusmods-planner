@@ -9,7 +9,7 @@ def freeDay(x):
 # returns selection: list of all lesson slots for us to iterate through the model to find schedule
 
 def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver(),
-                   option = "freeday", backtoback = 0):
+                   options = {}, backtoback = 0):
     complen = len(compmodsstr)
     if complen > numToTake:
         dummy = BitVec('dummy', 16)
@@ -32,11 +32,6 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
     M = [BitVec("m_%s" % i, 16) for i in range(240)] # tells us which modules
                                                      # we are taking during
                                                      # each hour
-    if (option == "mintravel"):
-        Costs = [BitVec("cost_%s" % i, 16) for i in range(239)]
-        for i in range(239):
-            solver.add(Costs[i] == If(Or(M[i] == -1, M[i+1] == -1, M[i] == M[i+1]), 0, 1))
-            solver.add(Sum(Costs) == backtoback)
 
     for modIndex, mod in enumerate(mods):
         moduleCode = mod[0]
@@ -61,12 +56,12 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
 
         solver.add(constraints)
 
-    if (option == "freeday"):
+    if "freeday" in options and options["freeday"]:
         freeDayConstraint = [Or([And([M[i] == -1 for i in freeDay(j)]) for j in range(5)])]
         # solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
         solver.add(freeDayConstraint)
 
-    if (option == "nobacktoback"):
+    if "nobacktoback" in options and options["nobacktoback"]:
         for i in range(239):
             solver.add(Or(M[i] == -1, M[i+1] == -1, M[i] == M[i+1]))
 
@@ -82,7 +77,7 @@ def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):
     return Z3_benchmark_to_smtlib_string(f.ctx_ref(), name, logic,
                                          status, "", 0, v, f.as_ast())
 
-def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], option = "freeday"):
+def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}):
     s = Solver()
     compmods = [transformMod(query(m)) for m in compmodsstr]
     optmods = [transformMod(query(m)) for m in optmodsstr]
@@ -90,6 +85,6 @@ def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], option = "freeday")
     complst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in compmods]
     optlst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in optmods]
     modlst = complst + optlst
-    parseZ3Queryv4(numToTake, complst, optlst, s, option)
+    parseZ3Queryv4(numToTake, complst, optlst, s, options)
     # return toSMT2Benchmark(s)
     return [toSMT2Benchmark(s), modsListToLessonMapping(compmods + optmods)]
