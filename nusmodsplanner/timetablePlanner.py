@@ -1,5 +1,5 @@
 import sys
-from querySolver import *
+from querySolverBV import *
 import mod_utils
 
 numMods = int(sys.argv[1])
