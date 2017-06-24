@@ -73,12 +73,12 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
     if "nolessonsbefore" in options:
         hours = hoursBefore(options['nolessonsbefore'])
         for i in hours:
-            solver.add(M[i] == numToTake)
+            solver.add(M[i] == 999)
 
     if "nolessonsafter" in options:
         hours = hoursAfter(options['nolessonsafter'])
         for i in hours:
-            solver.add(M[i] == numToTake)
+            solver.add(M[i] == 999)
 
 
 def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):

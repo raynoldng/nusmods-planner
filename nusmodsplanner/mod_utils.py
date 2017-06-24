@@ -192,6 +192,40 @@ def scheduleValid(schedule):
     combinedHours = list(itertools.chain.from_iterable(hours))
     return len(combinedHours) == len(Set(combinedHours))
 
+def checkNoLessonsBefore(schedule, hour):
+    """ Returns true if schedule does not have any lessons before input hour
+    """
+
+    hours = hoursBefore(hour)
+    # check that there not clashed between timetable and "illegal hours"
+    timetableHours = [getHours(s) for s in schedule]
+    combinedHours = list(itertools.chain.from_iterable(timetableHours))
+
+    illegalHours = Set(hours)
+    timetable = Set(combinedHours)
+
+    if(len(illegalHours.intersection(timetable)) > 0):
+        return False
+    else:
+        return True
+
+def checkNoLessonsAfter(schedule, hour):
+    """ Returns true if schedule does not have any lessons before input hour
+    """
+
+    hours = hoursAfter(hour)
+    # check that there not clashed between timetable and "illegal hours"
+    timetableHours = [getHours(s) for s in schedule]
+    combinedHours = list(itertools.chain.from_iterable(timetableHours))
+
+    illegalHours = Set(hours)
+    timetable = Set(combinedHours)
+
+    if(len(illegalHours.intersection(timetable)) > 0):
+        return False
+    else:
+        return True
+
 def run():
     """Sample Usage
 
