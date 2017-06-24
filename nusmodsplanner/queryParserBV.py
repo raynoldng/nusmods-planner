@@ -28,7 +28,7 @@ def hoursAfter(x):
     return hours
 
 def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver(),
-                   options = {}, backtoback = 0):
+                   options = {}):
     complen = len(compmodsstr)
     if complen > numToTake:
         dummy = BitVec('dummy', 16)
@@ -91,12 +91,12 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
     if "nolessonsbefore" in options:
         hours = hoursBefore(options['nolessonsbefore'])
         for i in hours:
-            solver.add(M[i] = numToTake)
+            solver.add(M[i] == numToTake)
 
     if "nolessonsafter" in options:
         hours = hoursAfter(options['nolessonsafter'])
         for i in hours:
-            solver.add(M[i] = numToTake)
+            solver.add(M[i] == numToTake)
 
 
 def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):

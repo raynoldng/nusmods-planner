@@ -9,18 +9,19 @@ from sets import Set
 import json
 from z3 import *
 from mod_utils import *
-from queryParser import parseQuery
+from queryParserBV import parseQuery
 
 # Main function 
 def solveQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}):
     s, modlst = parseQuery(numToTake, compmodsstr, optmodsstr, options, 
-                           debug = true)
+                           debug = True)
     if s.check() == sat:
-        print "Candidate Timetable:"
+        # print "Candidate Timetable:"
         m = s.model()
-        outputFormatter(m, numToTake, modlst)
+        # outputFormatter(m, numToTake, modlst)
+        return timetable(m, numToTake, modlst)
     else:
-        print "Query UNSAT"
+        return []
 
 def timetablePlannerv4(numToTake, compmodsstr = [], optmodsstr = []):
     s = Solver()
@@ -38,6 +39,21 @@ def timetablePlannerv4(numToTake, compmodsstr = [], optmodsstr = []):
     else:
         print "free day not possible"
 
+def timetable(model, numToTake, modlst):
+    result = []
+    for i in range(numToTake):
+        modIndex = model[BitVec("x_%s" % i, 16)].as_long()
+        mod = modlst[modIndex]
+        moduleCode = mod[0]
+        # print "Module: %s" % moduleCode
+        for lessonType, slots in mod[1].iteritems():
+            # print "All lesson slots: %s" % slots
+            chosenSlot = model[BitVec('%s_%s' % (moduleCode, lessonType), 16)].as_long()
+            # print "module code: %s, lesson: %s, model: %s" % (moduleCode, lessonType, chosenSlot)
+            slotName = slots[chosenSlot][0]
+            result.append("%s_%s_%s" % (moduleCode, lessonType, slotName))
+    return result
+
 def outputFormatter(model, numToTake, modlst):
     for i in range(numToTake):
         modIndex = model[BitVec("x_%s" % i, 16)].as_long()
@@ -47,7 +63,7 @@ def outputFormatter(model, numToTake, modlst):
         for lessonType, slots in mod[1].iteritems():
             # print "All lesson slots: %s" % slots
             chosenSlot = model[BitVec('%s_%s' % (moduleCode, lessonType), 16)].as_long()
-            print "module code: %s, lesson: %s, model: %s" % (moduleCode, lessonType, chosenSlot)
+            # print "module code: %s, lesson: %s, model: %s" % (moduleCode, lessonType, chosenSlot)
             slotName = slots[chosenSlot][0]
             print "%s_%s_%s" % (moduleCode, lessonType, slotName)
 
