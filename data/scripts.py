@@ -18,6 +18,14 @@ python scripts.py
 
 Warning! Will overwrite existing data
 '''
+def pullLessonTypes():
+    allLessons = [dict[k] for k in dict.keys()]
+    allLessons = [i for sublist in allLessons for i in sublist]
+    lessonTypes = Set([l['LessonType'] for l in allLessons])
+    lessonTypes = list(lessonTypes)
+    lessonTypes.sort()
+    return lessonTypes
+
 def pullVenues():
     allLessons = [dict[k] for k in dict.keys()]
     allLessons = [i for sublist in allLessons for i in sublist]

@@ -5,7 +5,7 @@ import json
 import calendar
 import itertools
 import os
-from definitions import ROOT_DIR
+from definitions import ROOT_DIR, lessonTypeCodes
 from z3 import *
 ENV = "DEV" # faster to do everything offline, AY16-17S
 
@@ -13,6 +13,9 @@ if ENV == "DEV":
     pathToData = os.path.join(ROOT_DIR, '../data/timetable.json')
     _mods = json.load(open(pathToData))
     _dict = {x['ModuleCode']: x['Timetable'] for x in _mods if 'Timetable' in x}
+
+def lessonTypeToCode(lessonType):
+    return lessonTypeCodes[lessonType]
 
 def modsListToLessonMapping(transformedModsLst):
     # prepare list of mod -> lessons -> slots
