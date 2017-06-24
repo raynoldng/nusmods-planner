@@ -45,12 +45,13 @@ def modsListToLessonMapping(transformedModsLst):
 def query(code):
     code = code.upper() # codes are in upper case
     # if in DEV mode then pull everything from local sources
-    if ENV == "DEV":
+    if (ENV == "DEV" and (code in _dict)):
         return (code, _dict[code])
     # TODO test online API
-    r = requests.get('http://api.nusmods.com/2016-2017/1/modules/' + code.upper() + '/timetable.json')
+    r = requests.get('http://api.nusmods.com/2016-2017/2/modules/' + code.upper() + '/timetable.json')
+    # print ('fetching from NUSModsAPI')
     r = r.json()
-    return r
+    return (code, r)
 
 def timeList(weektext, daytext, starttime, endtime):
     """Returns list of discrete timeslots based on hour-based indexing in a
