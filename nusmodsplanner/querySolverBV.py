@@ -54,18 +54,18 @@ def timetable(model, numToTake, modlst):
             result.append("%s_%s_%s" % (moduleCode, lessonType, slotName))
     return result
 
-def outputFormatter(model, numToTake, modlst):
-    for i in range(numToTake):
-        modIndex = model[BitVec("x_%s" % i, 16)].as_long()
-        mod = modlst[modIndex]
-        moduleCode = mod[0]
-        # print "Module: %s" % moduleCode
-        for lessonType, slots in mod[1].iteritems():
-            # print "All lesson slots: %s" % slots
-            chosenSlot = model[BitVec('%s_%s' % (moduleCode, lessonType), 16)].as_long()
-            # print "module code: %s, lesson: %s, model: %s" % (moduleCode, lessonType, chosenSlot)
-            slotName = slots[chosenSlot][0]
-            print "%s_%s_%s" % (moduleCode, lessonType, slotName)
+# def outputFormatter(model, numToTake, modlst):
+#     for i in range(numToTake):
+#         modIndex = model[BitVec("x_%s" % i, 16)].as_long()
+#         mod = modlst[modIndex]
+#         moduleCode = mod[0]
+#         # print "Module: %s" % moduleCode
+#         for lessonType, slots in mod[1].iteritems():
+#             # print "All lesson slots: %s" % slots
+#             chosenSlot = model[BitVec('%s_%s' % (moduleCode, lessonType), 16)].as_long()
+#             # print "module code: %s, lesson: %s, model: %s" % (moduleCode, lessonType, chosenSlot)
+#             slotName = slots[chosenSlot][0]
+#             print "%s_%s_%s" % (moduleCode, lessonType, slotName)
 
 def generalQueryv4(numToTake, compmodsstr = [], optmodsstr = [], option = "freeday"):
     s = Solver()

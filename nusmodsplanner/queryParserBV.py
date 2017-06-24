@@ -70,7 +70,8 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
                     # constraints.append(implication)
 
                     # replace modIndex with getVenueCode(slotName) when venue mapping is out
-                    venueImplicant = Implies(slotSelected, M[time] == modIndex)
+                    modLesson = modIndex * 10 + lessonTypeToCode(lessonType)
+                    venueImplicant = Implies(slotSelected, M[time] == modLesson)
                     constraints.append(venueImplicant)
 
         solver.add(constraints)
