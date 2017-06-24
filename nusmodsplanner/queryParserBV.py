@@ -1,3 +1,8 @@
+'''queryParserBV.py 
+
+Does the transformation of client query to SMTLIB2 input format and module
+mapping required for client to construct timetable from SMT solving results
+'''
 from sets import Set
 import json
 from z3 import *
@@ -7,6 +12,20 @@ def freeDay(x):
     day = range(x*24,(x+1)*24)
     return day + [i+120 for i in day]
 # returns selection: list of all lesson slots for us to iterate through the model to find schedule
+
+def hoursBefore(x):
+    hours = [range(i * 24, i * 24 + x) 
+                      + range(120 + i * 24, 120 + i * 24 + x) 
+                      for i in range(0,5)]
+    hours = [i for sublist in hours for i in sublist]
+    return hours
+
+def hoursAfter(x):
+    hours = [range(i * 24 + x, (i + 1) * 24) 
+                      + range(120 + i * 24 + x, 120 + (i + 1) * 24) 
+                      for i in range(0,5)]
+    hours = [i for sublist in hours for i in sublist]
+    return hours
 
 def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver(),
                    options = {}, backtoback = 0):
@@ -65,6 +84,20 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
         for i in range(239):
             solver.add(Or(M[i] == -1, M[i+1] == -1, M[i] == M[i+1]))
 
+    '''
+    To implement no lesson before/after, we assign a new dummy mod with index
+    numToTake and assert the implicants
+    '''
+    if "nolessonsbefore" in options:
+        hours = hoursBefore(options['nolessonsbefore'])
+        for i in hours:
+            solver.add(M[i] = numToTake)
+
+    if "nolessonsafter" in options:
+        hours = hoursAfter(options['nolessonsafter'])
+        for i in hours:
+            solver.add(M[i] = numToTake)
+
 
 def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):
     v = (Ast * 0)()
@@ -77,7 +110,8 @@ def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):
     return Z3_benchmark_to_smtlib_string(f.ctx_ref(), name, logic,
                                          status, "", 0, v, f.as_ast())
 
-def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}):
+def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {},
+    debug = False):
     s = Solver()
     compmods = [transformMod(query(m)) for m in compmodsstr]
     optmods = [transformMod(query(m)) for m in optmodsstr]
@@ -87,4 +121,7 @@ def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}):
     modlst = complst + optlst
     parseZ3Queryv4(numToTake, complst, optlst, s, options)
     # return toSMT2Benchmark(s)
-    return [toSMT2Benchmark(s), modsListToLessonMapping(compmods + optmods)]
+    if debug:
+        return [s, modlst]
+    else:
+        return [toSMT2Benchmark(s), modsListToLessonMapping(compmods + optmods)]
