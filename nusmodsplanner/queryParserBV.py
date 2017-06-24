@@ -70,13 +70,13 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
     To implement no lesson before/after, we assign a new dummy mod with index
     numToTake and assert the implicants
     '''
-    if "nolessonsbefore" in options:
-        hours = hoursBefore(options['nolessonsbefore'])
+    if "noLessonsBefore" in options:
+        hours = hoursBefore(options['noLessonsBefore'])
         for i in hours:
             solver.add(M[i] == 999)
 
-    if "nolessonsafter" in options:
-        hours = hoursAfter(options['nolessonsafter'])
+    if "noLessonsAfter" in options:
+        hours = hoursAfter(options['noLessonsAfter'])
         for i in hours:
             solver.add(M[i] == 999)
 
