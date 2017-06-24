@@ -17,6 +17,24 @@ if ENV == "DEV":
 def lessonTypeToCode(lessonType):
     return lessonTypeCodes[lessonType]
 
+def freeDay(x):
+    day = range(x*24,(x+1)*24)
+    return day + [i+120 for i in day]
+
+def hoursBefore(x):
+    hours = [range(i * 24, i * 24 + x) 
+                      + range(120 + i * 24, 120 + i * 24 + x) 
+                      for i in range(0,5)]
+    hours = [i for sublist in hours for i in sublist]
+    return hours
+
+def hoursAfter(x):
+    hours = [range(i * 24 + x, (i + 1) * 24) 
+                      + range(120 + i * 24 + x, 120 + (i + 1) * 24) 
+                      for i in range(0,5)]
+    hours = [i for sublist in hours for i in sublist]
+    return hours
+
 def modsListToLessonMapping(transformedModsLst):
     # prepare list of mod -> lessons -> slots
     val = {i[0]: {k:v.keys() for k, v in i[1].items()} for i in transformedModsLst}

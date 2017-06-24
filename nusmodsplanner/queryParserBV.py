@@ -8,25 +8,6 @@ import json
 from z3 import *
 from mod_utils import *
 
-def freeDay(x):
-    day = range(x*24,(x+1)*24)
-    return day + [i+120 for i in day]
-# returns selection: list of all lesson slots for us to iterate through the model to find schedule
-
-def hoursBefore(x):
-    hours = [range(i * 24, i * 24 + x) 
-                      + range(120 + i * 24, 120 + i * 24 + x) 
-                      for i in range(0,5)]
-    hours = [i for sublist in hours for i in sublist]
-    return hours
-
-def hoursAfter(x):
-    hours = [range(i * 24 + x, (i + 1) * 24) 
-                      + range(120 + i * 24 + x, 120 + (i + 1) * 24) 
-                      for i in range(0,5)]
-    hours = [i for sublist in hours for i in sublist]
-    return hours
-
 def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver(),
                    options = {}):
     complen = len(compmodsstr)
