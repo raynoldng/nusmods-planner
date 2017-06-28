@@ -66,6 +66,25 @@ class TestQueryParserBV(unittest.TestCase):
 		self.assertTrue(mod_utils.scheduleValid(timetable))
 		self.assertTrue(mod_utils.checkNoLessonsAfter(timetable, 19))
 
+	def testSatAndValidTimetable(self):
+		''' Returns empty (unsat) during test, should not be the case
+		'''
+		optmods = ['GEQ1000', 'CS1010', 'MA1102R', 'MA1101R']
+		options = {}
+		timetable = querySolverBV.solveQuery(4, [], optmods, options)
+		print timetable
+		self.assertTrue(mod_utils.scheduleValid(timetable))
+		self.assertTrue(mod_utils.checkNoLessonsAfter(timetable, 19))
+
+	def testSatAndValidTimetable2(self):
+		''' Returns empty (unsat) during test, should not be the case
+		'''
+		options = {'noLessonsAfter': 19, 'noLessonsBefore': 8}
+		compmods = ['MA1101R', 'ACC1002', 'GER1000', 'GEQ1000']
+		timetable = querySolverBV.solveQuery(4, compmods, [], options)
+		print timetable
+		self.assertTrue(mod_utils.scheduleValid(timetable))
+		self.assertTrue(mod_utils.checkNoLessonsAfter(timetable, 19))
 
 if __name__ == '__main__':
     unittest.main()
