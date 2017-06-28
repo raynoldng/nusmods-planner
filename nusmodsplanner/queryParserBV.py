@@ -20,7 +20,6 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
     mods = compmodsstr + optmodsstr
     numMods = len(mods)
 
-
     X = [BitVec("x_%s" % i, 16) for i in range(numToTake)] # creates indicators
                                                            # determining which
                                                            # modules we try
@@ -33,10 +32,15 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
                                                      # we are taking during
                                                      # each hour
 
+    if "lockedLessonSlots" in options:
+        lockedLessonsSlots = options['lockedLessonSlots']
+        lockedLessonMapping = {l[:l.rindex('_')]: l  for l in lockedLessonsSlots}
+
     for modIndex, mod in enumerate(mods):
         moduleCode = mod[0]
         constraints = []
         selected = Or([X[i] == modIndex for i in range(numToTake)]) #is this mod selected
+
         for lessonType, slots in mod[1].iteritems():
             numSlots = len(slots)
             chosenSlot = BitVec('%s_%s' % (moduleCode, lessonType), 16)
@@ -66,6 +70,16 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
         for i in range(239):
             solver.add(Or(M[i] == -1, M[i+1] == -1, M[i] == M[i+1]))
 
+    if 'lockedLessonSlots' in options:
+        lockedSlots = options['lockedLessonSlots']
+        for lessonSlot in lockedSlots:
+           tokens = lessonSlot.split('_');
+           moduleCode, lessonType, slot = tokens
+           lessonSlots = filter(lambda x: x[0] == moduleCode, compmodsstr)[0][1][lessonType]
+           lessonSlotIndex = [i for i, slotToTimes in enumerate(lessonSlots)
+                              if slotToTimes[0] == slot][0]
+           solver.add(BitVec('%s_%s' % (moduleCode, lessonType), 16) == lessonSlotIndex)
+
     '''
     To implement no lesson before/after, we assign a new dummy mod with index
     numToTake and assert the implicants
@@ -79,6 +93,7 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
         hours = hoursAfter(options['noLessonsAfter'])
         for i in hours:
             solver.add(M[i] == 999)
+
 
 
 def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):
