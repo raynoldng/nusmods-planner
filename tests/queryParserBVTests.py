@@ -47,6 +47,15 @@ class TestQueryParserBV(unittest.TestCase):
         self.assertTrue(self.calendarUtils.scheduleValid(timetable))
         self.assertTrue(len(self.calendarUtils.gotFreeDay(timetable)) > 0)
 
+    def testNoFreeDay(self):
+        ''' Verify that query returns unsat if a freeday is indeed impossible
+        '''
+        compmods = ['CS1010', 'CS1231', 'CS2105', 'ST2131']
+        optmods = ['MA1101R', 'CS2020']
+        options = {'freeday': True}
+        timetable = querySolverBV.solveQuery(5, [], optmods, options, semester = SEMESTER)
+        self.assertTrue(len(timetable) == 0)
+
     def testNoLessonBefore(self):
         '''Verify that assertions represent a timetable that has no lessons
         before the user defined time
