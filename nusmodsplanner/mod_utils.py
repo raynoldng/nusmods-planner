@@ -5,12 +5,12 @@ import json
 import calendar
 import itertools
 import os
-from definitions import ROOT_DIR, lessonTypeCodes
+from definitions import ROOT_DIR, lessonTypeCodes, TIMETABLE_FILE
 from z3 import *
 ENV = "DEV" # faster to do everything offline, AY16-17S
 
 if ENV == "DEV":
-    pathToData = os.path.join(ROOT_DIR, '../data/timetable.json')
+    pathToData = os.path.join(ROOT_DIR, '../data/' + TIMETABLE_FILE)
     _mods = json.load(open(pathToData))
     _dict = {x['ModuleCode']: x['Timetable'] for x in _mods if 'Timetable' in x}
 
