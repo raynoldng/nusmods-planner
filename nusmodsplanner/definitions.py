@@ -6,6 +6,3 @@ lessonTypeCodes = {'Design Lecture': 0,  'Laboratory': 1,  'Lecture': 2,
 			   'Recitation': 5,  'Sectional Teaching': 6,  
 			   'Seminar-Style Module Class': 7,  'Tutorial': 8,  
 			   'Tutorial Type 2': 9}
-
-# TIMETABLE_FILE = 'AY1617S2_timetable.json'
-TIMETABLE_FILE = 'AY1718S1_timetable.json'
