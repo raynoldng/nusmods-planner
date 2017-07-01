@@ -12,8 +12,8 @@ from mod_utils import *
 from queryParserBV import parseQuery
 
 # Main function 
-def solveQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}):
-    s, modlst = parseQuery(numToTake, compmodsstr, optmodsstr, options, 
+def solveQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}, semester = 'AY1617S2'):
+    s, modlst = parseQuery(numToTake, compmodsstr, optmodsstr, options, semester,
                            debug = True)
     if s.check() == sat:
         # print "Candidate Timetable:"

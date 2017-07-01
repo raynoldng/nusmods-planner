@@ -6,7 +6,11 @@ mapping required for client to construct timetable from SMT solving results
 from sets import Set
 import json
 from z3 import *
+# from mod_utils import *
+
+from mod_utils import CalendarUtils
 from mod_utils import *
+
 
 def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver(),
                    options = {}):
@@ -107,11 +111,13 @@ def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):
     return Z3_benchmark_to_smtlib_string(f.ctx_ref(), name, logic,
                                          status, "", 0, v, f.as_ast())
 
-def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {},
+def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}, semester = 'AY1617S2',
     debug = False):
     s = Solver()
-    compmods = [transformMod(query(m)) for m in compmodsstr]
-    optmods = [transformMod(query(m)) for m in optmodsstr]
+    modUtils = CalendarUtils(semester)
+
+    compmods = [transformMod(modUtils.query(m)) for m in compmodsstr]
+    optmods = [transformMod(modUtils.query(m)) for m in optmodsstr]
     # transfomrs slotname to timing mappings into list of tuples (s,t) instead
     complst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in compmods]
     optlst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in optmods]
