@@ -15,11 +15,16 @@ from queryParserBV import parseQuery
 def solveQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}, semester = 'AY1617S2'):
     s, modlst = parseQuery(numToTake, compmodsstr, optmodsstr, options, semester,
                            debug = True)
+    if "numFreedays" in options and options["numFreedays"] > 0:
+        freedayFlag = True
+    else:
+        freedayFlag = False
+
     if s.check() == sat:
         # print "Candidate Timetable:"
         m = s.model()
         # outputFormatter(m, numToTake, modlst)
-        return timetable(m, numToTake, modlst)
+        return timetable(m, numToTake, modlst, freedayFlag)
     else:
         return []
 
@@ -39,7 +44,12 @@ def timetablePlannerv4(numToTake, compmodsstr = [], optmodsstr = []):
     else:
         print "free day not possible"
 
-def timetable(model, numToTake, modlst):
+def timetable(model, numToTake, modlst, freedayFlag = False):
+    ''' if freedayFlag is set to True, need to account for the fact that FREEDAY is in the front
+    of modlst
+    '''
+    if freedayFlag:
+        modlst.insert(0, freedayMod(1))
     result = []
     for i in range(numToTake):
         modIndex = model[BitVec("x_%s" % i, 16)].as_long()

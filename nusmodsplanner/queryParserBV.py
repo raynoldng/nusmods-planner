@@ -14,19 +14,27 @@ from mod_utils import *
 
 def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver(),
                    options = {}):
-    complen = len(compmodsstr)
-    if complen > numToTake:
-        dummy = BitVec('dummy', 16)
-        solver.add([dummy<1,dummy>1]) #for unsat
-        return
     timetable = []
     selection = []
+
+    if "numFreedays" in options and options["numFreedays"] > 0:
+        numFreedays = options["numFreedays"]
+        if "freedays" in options:
+            freedays = options["freedays"]
+        else:
+            freedays = []
+        compmodsstr.insert(0,freedayMod(numFreedays, freedays))
+        numToTake += 1
+
+    complen = len(compmodsstr)
     mods = compmodsstr + optmodsstr
     numMods = len(mods)
 
     X = [BitVec("x_%s" % i, 16) for i in range(numToTake)] # creates indicators
                                                            # determining which
                                                            # modules we try
+
+
     solver.add([X[i]==i for i in range(complen)])
     solver.add([X[i]<X[i+1] for i in range(numToTake-1)])
     solver.add(X[0] >= 0)

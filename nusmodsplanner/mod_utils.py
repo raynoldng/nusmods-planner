@@ -10,6 +10,8 @@ from z3 import *
 
 
 def lessonTypeToCode(lessonType):
+    if "freeday" in lessonType:
+        return 0
     return lessonTypeCodes[lessonType]
 
 def freeDay(x):
@@ -104,6 +106,19 @@ def splitIntoLessonTypes(mod, option = ""):
     else:
         return "unknown option"
 
+def freedayMod(numFreedays, freedays = []):
+    ''' returns a mod tuple in the same internal representation used to solve timetable query
+    freedays is an array of weekdays to keep free
+    '''
+    weekdays = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
+    freedayNumbers = [weekdays[day] for day in freedays]
+    lessonSlots1 = [{"freeday-%s" % i : [(str(d), freeDay(d)) for d in freedayNumbers]}
+                    for i in range(0, len(freedays))]
+    lessonSlots2 = [{"freeday-%s" % i : [(str(d), freeDay(d)) for d in range(5)]}
+                    for i in range(len(freedays), numFreedays)]
+    lessonSlots = lessonSlots1 + lessonSlots2
+    return ['FREEDAY'] + lessonSlots
+
 class CalendarUtils:
     ''' This class should only contain functions that require the timetable data
     '''
@@ -134,6 +149,7 @@ class CalendarUtils:
     
     # takes in a list of slots and returns lists of free days
     def gotFreeDay(self, schedule):
+        schedule = [s for s in schedule if 'FREEDAY' not in s]
         modCodes = Set([s.split('_')[0] for s in schedule])
         mods = [self.queryAndTransform(m) for m in modCodes]
         mods = dict((m[0], m[1]) for m in mods)
@@ -141,6 +157,8 @@ class CalendarUtils:
         hours = []
         for slot in schedule:
             mod, lessonType, slotName = slot.split('_')
+            if mod == 'FREEDAY':
+                continue
             hours += mods[mod][lessonType][slotName]
         hours.sort()
 
@@ -176,7 +194,10 @@ class CalendarUtils:
         :rtype: Boolean
 
         """
+        if len(schedule) == 0:
+            return False
         # check if lesson types of each covered
+        schedule = [s for s in schedule if "FREEDAY" not in s]
         mods = Set([s.split('_')[0] for s in schedule])
         # get jsons of each mods
         modsJSON = [self.query(m)[1] for m in mods]
