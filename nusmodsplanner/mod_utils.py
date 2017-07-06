@@ -109,7 +109,9 @@ class CalendarUtils:
     '''
     def __init__(self, semester = 'AY1718S1'):
         pathToData = os.path.join(ROOT_DIR, '../data/' + semester + '_timetable.json')
-        self._dict = json.load(open(pathToData))
+        self.BASE_URL = 'http://api.nusmods.com/20' + semester[2:4] + '-20' + semester[4:6] + '/' + \
+        semester[-1] + '/modules/'
+        # self._dict = json.load(open(pathToData))
 
     
     # Sample API call:
@@ -117,12 +119,12 @@ class CalendarUtils:
     # returns tuple of (ModuleCode, [{Lessons for each type}])
     def query(self, code):
         code = code.upper() # codes are in upper case
-        # if in DEV mode then pull everything from local sources
-        if code in self._dict:
-            return (code, self._dict[code])
-        # TODO test online API
-        r = requests.get('http://api.nusmods.com/2016-2017/2/modules/' + code.upper() + '/timetable.json')
-        # print ('fetching from NUSModsAPI')
+        # # if in DEV mode then pull everything from local sources
+        # if code in self._dict:
+        #     return (code, self._dict[code])
+
+        url = self.BASE_URL + code.upper() + '/timetable.json'
+        r = requests.get(self.BASE_URL + code.upper() + '/timetable.json')
         r = r.json()
         return (code, r)
 
