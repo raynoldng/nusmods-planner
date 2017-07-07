@@ -129,8 +129,8 @@ def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}, semes
     # transfomrs slotname to timing mappings into list of tuples (s,t) instead
     complst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in compmods]
     optlst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in optmods]
-    modlst = complst + optlst
     parseZ3Queryv4(numToTake, complst, optlst, s, options)
+    modlst = complst + optlst
     # return toSMT2Benchmark(s)
     if debug:
         return [s, modlst]

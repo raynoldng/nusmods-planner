@@ -11,7 +11,7 @@ from z3 import *
 
 def lessonTypeToCode(lessonType):
     if "freeday" in lessonType:
-        return 0
+        return int(lessonType[-1])
     return lessonTypeCodes[lessonType]
 
 def freeDay(x):
@@ -112,12 +112,12 @@ def freedayMod(numFreedays, freedays = []):
     '''
     weekdays = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
     freedayNumbers = [weekdays[day] for day in freedays]
-    lessonSlots1 = [{"freeday-%s" % i : [(str(d), freeDay(d)) for d in freedayNumbers]}
-                    for i in range(0, len(freedays))]
-    lessonSlots2 = [{"freeday-%s" % i : [(str(d), freeDay(d)) for d in range(5)]}
-                    for i in range(len(freedays), numFreedays)]
-    lessonSlots = lessonSlots1 + lessonSlots2
-    return ['FREEDAY'] + lessonSlots
+    lessonSlots1 = {"freeday-%s" % i : [(str(d), freeDay(d)) for d in freedayNumbers]
+                    for i in range(0, len(freedays))}
+    lessonSlots2 = {"freeday-%s" % i : [(str(d), freeDay(d)) for d in range(5)]
+                    for i in range(len(freedays), numFreedays)}
+    lessonSlots1.update(lessonSlots2)
+    return ['FREEDAY', lessonSlots1]
 
 class CalendarUtils:
     ''' This class should only contain functions that require the timetable data

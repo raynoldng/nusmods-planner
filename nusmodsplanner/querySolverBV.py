@@ -48,8 +48,6 @@ def timetable(model, numToTake, modlst, freedayFlag = False):
     ''' if freedayFlag is set to True, need to account for the fact that FREEDAY is in the front
     of modlst
     '''
-    if freedayFlag:
-        modlst.insert(0, freedayMod(1))
     result = []
     for i in range(numToTake):
         modIndex = model[BitVec("x_%s" % i, 16)].as_long()
