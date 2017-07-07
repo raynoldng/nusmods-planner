@@ -28,7 +28,6 @@ class TestQueryParserBV(unittest.TestCase):
         for d in ['Even Tuesday', 'Odd Tuesday']:
             self.assertTrue(d in freedays)
         # assert that we get another free day on top of the indicated Tuesday
-        print self.calendarUtils.gotFreeDay(timetable)
         self.assertTrue(len(self.calendarUtils.gotFreeDay(timetable)) > 2)
 
 if __name__ == '__main__':
