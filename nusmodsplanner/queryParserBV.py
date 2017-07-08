@@ -7,7 +7,7 @@ from sets import Set
 import json
 from z3 import *
 # from mod_utils import *
-
+import random
 from mod_utils import CalendarUtils
 from mod_utils import *
 
@@ -16,6 +16,10 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
                    options = {}):
     timetable = []
     selection = []
+
+    # EXPERIMENT: shuffle mods to try to get a new timetable every time
+    random.shuffle(compmodsstr)
+    random.shuffle(optmodsstr)
 
     if "numFreedays" in options and options["numFreedays"] > 0:
         numFreedays = options["numFreedays"]
@@ -59,6 +63,8 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
             constraints.append(Implies(selected, And(chosenSlot >= 0, chosenSlot < numSlots)))
             # timetable += [Int('%s_%s_%s' % (moduleCode, lessonType, index))
             # for index in range(len(timing))]
+            # EXPERIMENT: attempt to return a new timetable every time
+            random.shuffle(slots)
             for slotIndex, (slotName, timing) in enumerate(slots):
                 slotSelected = (chosenSlot == slotIndex)
                 for index, time in enumerate(timing):
