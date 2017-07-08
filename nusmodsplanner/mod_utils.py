@@ -5,6 +5,7 @@ import json
 import calendar
 import itertools
 import os
+import random
 from definitions import ROOT_DIR, lessonTypeCodes
 from z3 import *
 
