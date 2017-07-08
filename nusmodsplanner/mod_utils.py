@@ -5,6 +5,8 @@ import json
 import calendar
 import itertools
 import os
+from collections import OrderedDict
+import random
 from definitions import ROOT_DIR, lessonTypeCodes
 from z3 import *
 
@@ -73,6 +75,10 @@ def timeList(weektext, daytext, starttime, endtime):
         return [i+120 for i in lst]+lst
 
 def splitIntoLessonTypes(mod, option = ""):
+    def shuffle_dict(d):
+        keys = d.keys()
+        random.shuffle(keys)
+        return dict(OrderedDict([(k, d[k]) for k in keys]))
     if option == "":
         lessonTypes = Set([i['LessonType'] for i in mod])
         mydict = {}
@@ -86,23 +92,25 @@ def splitIntoLessonTypes(mod, option = ""):
                 mydict[lType][classId] = mydict[lType][classId] + tList
             else:
                 mydict[lType][classId] = tList
+        # EXPERIMENT: shuffle to attempt to get a new schedule
+        mydict = {k:shuffle_dict(v) for k,v in mydict.iteritems()}
         return mydict
-    elif option == "includevenues":
-        lessonTypes = Set([i['LessonType'] for i in mod])
-        m_dict = {}
-        for i in lessonTypes:
-           m_dict[i] = {}
-        for lst in mod:
-            tList = timeList(lst["WeekText"], lst["DayText"], lst["StartTime"], lst["EndTime"])
-            classId = lst['ClassNo']
-            lType = lst['LessonType']
-            venue = lst['Venue']
-            if classId in m_dict[lType].keys():
-                m_dict[lType][classId][0] = m_dict[lType][classId][0] + tList
-            else:
-                m_dict[lType][classId] = [tList, venue]
-                # here we are assuming each ClassNo only has one venue, or if they have different venues, they are in the same cluster
-        return m_dict
+    # elif option == "includevenues":
+    #     lessonTypes = Set([i['LessonType'] for i in mod])
+    #     m_dict = {}
+    #     for i in lessonTypes:
+    #        m_dict[i] = {}
+    #     for lst in mod:
+    #         tList = timeList(lst["WeekText"], lst["DayText"], lst["StartTime"], lst["EndTime"])
+    #         classId = lst['ClassNo']
+    #         lType = lst['LessonType']
+    #         venue = lst['Venue']
+    #         if classId in m_dict[lType].keys():
+    #             m_dict[lType][classId][0] = m_dict[lType][classId][0] + tList
+    #         else:
+    #             m_dict[lType][classId] = [tList, venue]
+    #             # here we are assuming each ClassNo only has one venue, or if they have different venues, they are in the same cluster
+    #     return m_dict
     else:
         return "unknown option"
 

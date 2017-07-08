@@ -20,11 +20,12 @@ class modUtilsTest(unittest.TestCase):
         '''
         modUtils_AY1617S2 = self.CalendarUtils('AY1617S2')
         # self.assertTrue(modUtils_AY1617S2._dict is not None)
-        self.assertTrue(modUtils_AY1617S2.query('GER1000') is not None)
+        self.assertTrue(modUtils_AY1617S2.queryAndTransform('GER1000') is not None)
+        print modUtils_AY1617S2.queryAndTransform('GER1000')
 
         modUtils_AY1718S1 = self.CalendarUtils('AY1718S1')
         # self.assertTrue(modUtils_AY1718S1._dict is not None)
-        self.assertTrue(modUtils_AY1718S1.query('GER1000') is not None)
+        self.assertTrue(modUtils_AY1718S1.queryAndTransform('GER1000') is not None)
 
     # def test_valid_schedule(self):
     #     calendarUtils = self.CalendarUtils('AY1617S2')
