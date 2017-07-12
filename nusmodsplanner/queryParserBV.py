@@ -14,6 +14,7 @@ from mod_utils import *
 
 def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver(),
                    options = {}):
+    FREEDAY_OFFSET = 1000 # required to resolve noLessonsBefore/After conflict
     timetable = []
     selection = []
 
@@ -72,8 +73,12 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
                     # implication = Implies(slotSelected, And(implicants))
                     # constraints.append(implication)
 
-                    # replace modIndex with getVenueCode(slotName) when venue mapping is out
-                    modLesson = modIndex * 10 + lessonTypeToCode(lessonType)
+                    # need to consider the special case where its a freeday
+                    # it follows that FREEDAY mods have a venue code of > 1000
+                    if 'FREEDAY' in moduleCode:
+                        modLesson = 1000 + 10 * modIndex + lessonTypeToCode(lessonType)
+                    else:
+                        modLesson = modIndex * 10 + lessonTypeToCode(lessonType)
                     venueImplicant = Implies(slotSelected, M[time] == modLesson)
                     constraints.append(venueImplicant)
 
@@ -99,18 +104,19 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
            solver.add(BitVec('%s_%s' % (moduleCode, lessonType), 16) == lessonSlotIndex)
 
     '''
-    To implement no lesson before/after, we assign a new dummy mod with index
-    numToTake and assert the implicants
+    To implement no lesson before/after, assert that the venueImplicant is above FREEDAY_OFFSET,
+    there is no way an actual module lesson will have a venue implicant above FREEDAY_OFFSET
+    This prevents conflicts between asserting a freeday and no lessons before/after
     '''
     if "noLessonsBefore" in options:
         hours = hoursBefore(options['noLessonsBefore'])
         for i in hours:
-            solver.add(M[i] == 999)
+            solver.add(M[i] >= FREEDAY_OFFSET)
 
     if "noLessonsAfter" in options:
         hours = hoursAfter(options['noLessonsAfter'])
         for i in hours:
-            solver.add(M[i] == 999)
+            solver.add(M[i] >= FREEDAY_OFFSET)
 
 
 
