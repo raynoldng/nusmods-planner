@@ -17,6 +17,15 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
     timetable = []
     selection = []
 
+    if 'freeday' in options and options['freeday']:
+        if 'possibleFreedays' in options:
+            possibleFreedays = options['possibleFreedays']
+        else:
+            possibleFreedays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        compmodsstr.insert(0,ModWithFullDays(possibleFreedays))
+        numToTake += 1
+
+    # WARNING DEPRECATED
     if "numFreedays" in options and options["numFreedays"] > 0:
         numFreedays = options["numFreedays"]
         if "freedays" in options:
@@ -72,11 +81,6 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
                     constraints.append(venueImplicant)
 
         solver.add(constraints)
-
-    if "freeday" in options and options["freeday"]:
-        freeDayConstraint = [Or([And([M[i] == -1 for i in freeDay(j)]) for j in range(5)])]
-        # solver.add(Or([Distinct(timetable+freeDay(i)) for i in range(5)]))
-        solver.add(freeDayConstraint)
 
     if "nobacktoback" in options and options["nobacktoback"]:
         for i in range(239):

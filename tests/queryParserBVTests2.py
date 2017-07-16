@@ -1,5 +1,9 @@
 '''
 For semester 1
+NOTE!
+
+Specifying the number of freedays and specifying the free days has been deprecated.
+Instead the query asserts that freeday is one of the specified
 '''
 import unittest
 import sys
@@ -59,5 +63,41 @@ class TestQueryParserBV(unittest.TestCase):
         print freedays
         for d in ['Even Monday', 'Odd Monday', 'Even Wednesday', 'Odd Wednesday']:
             self.assertTrue(d in freedays)
+
+    def testFreeday(self):
+        ''' Return a timetable that has at least one free day
+        '''
+
+        compMods = ['CS1231', 'CS2100', 'MA1101R', 'MA1102R']
+        optMods = []
+        numMods = 4
+        options = {'freeday': True}
+        timetable = querySolverBV.solveQuery(numMods, compMods, [], options, semester = SEMESTER)
+        print 'testFreeday'
+        print timetable
+        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
+        freedays = self.calendarUtils.gotFreeDay(timetable)
+        print freedays
+        self.assertTrue(len(freedays) >= 2)
+
+    def testFreedayFromSubset(self):
+        ''' Return a timetable that has at least one free day from specified weekdays
+        '''
+
+        compMods = ['CS1231', 'CS2100', 'MA1101R', 'MA1102R']
+        optMods = []
+        numMods = 4
+        options = {'freeday': True, 'possibleFreedays': ['Tuesday', 'Wednesday']}
+        timetable = querySolverBV.solveQuery(numMods, compMods, [], options, semester = SEMESTER)
+        print 'testFreedayFromSubset'
+        print timetable
+        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
+        freedays = self.calendarUtils.gotFreeDay(timetable)
+        print freedays
+        isMondayFree = 'Even Monday' in freedays and 'Odd Monday' in freedays
+        isTuesdayFree = 'Even Tuesday' in freedays and 'Odd Tuesday' in freedays
+        self.assertTrue(isMondayFree or isTuesdayFree)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -114,6 +114,16 @@ def splitIntoLessonTypes(mod, option = ""):
     else:
         return "unknown option"
 
+def ModWithFullDays(possibleFreedays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']):
+    ''' returns a mod tuple in the same internal representation used to solve timetable query
+    this mock module has a lesson type (freeday-x) corresponding to a full weekdays
+    '''
+    weekdays = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
+    freedayNumbers = [weekdays[day] for day in possibleFreedays]
+    lessonSlots = {"freeday-1" : [(str(d), freeDay(d)) for d in freedayNumbers]}
+    return ['FREEDAY', lessonSlots]
+
+# WARNING DEPRECATED
 def freedayMod(numFreedays, freedays = []):
     ''' returns a mod tuple in the same internal representation used to solve timetable query
     freedays is an array of weekdays to keep free
