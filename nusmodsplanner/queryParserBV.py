@@ -19,7 +19,7 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
     selection = []
 
     if 'freeday' in options and options['freeday']:
-        if 'possibleFreedays' in options:
+        if 'possibleFreedays' in options and len(options['possibleFreedays']) > 0:
             possibleFreedays = options['possibleFreedays']
         else:
             possibleFreedays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
