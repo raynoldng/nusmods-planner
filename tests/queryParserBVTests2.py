@@ -48,7 +48,7 @@ class TestQueryParserBV(unittest.TestCase):
         self.assertTrue(self.calendarUtils.scheduleValid(timetable))
         freedays = self.calendarUtils.gotFreeDay(timetable)
         print freedays
-        for d in ['Even Monday', 'Odd Monday', 'Even Wednesday', 'Odd Wednesday']:
+        for d in ['Even Monday', 'Odd Monday', 'Even Tuesday', 'Odd Tuesday']:
             self.assertTrue(d in freedays)
 
     def testFreeday(self):
