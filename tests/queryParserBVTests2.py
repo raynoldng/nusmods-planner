@@ -36,28 +36,15 @@ class TestQueryParserBV(unittest.TestCase):
         # assert that we get another free day on top of the indicated Tuesday
         self.assertTrue(len(self.calendarUtils.gotFreeDay(timetable)) > 2)
 
-    def testTwoSpecificFreedays(self):
-        ''' 2 specified free days
+    def testSpecificFreedayandNoLessonsBefore(self):
+        ''' Live version returned incorrectly unsat
         '''
-        compMods = ['CS1010', 'CS1231', 'GER1000', 'MA1101R']
+        compMods = ['GEQ1000', 'PS2203', 'PS2237', 'PS3271', 'SN1101E']
         optMods = []
-        options = {'numFreedays': 2, 'freedays': ['Tuesday', 'Wednesday']}
-        timetable = querySolverBV.solveQuery(4, compMods, [], options, semester = SEMESTER)
-        print timetable
-        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
-        freedays = self.calendarUtils.gotFreeDay(timetable)
-        print freedays
-        for d in ['Even Tuesday', 'Odd Tuesday', 'Even Wednesday', 'Odd Wednesday']:
-            self.assertTrue(d in freedays)
+        options = {'numFreedays': 2, 'freedays': ['Monday', 'Tuesday'], 'noLessonsBefore': 8}
+        numMods = 5
 
-    def testTwoSpecificFreedays2(self):
-        ''' 2 specified free days
-        '''
-        compMods = ['CS1010', 'CS1231', 'GER1000', 'MA1101R']
-        optMods = []
-        options = {'numFreedays': 2, 'freedays': ['Monday', 'Wednesday']}
-        timetable = querySolverBV.solveQuery(4, compMods, [], options, semester = SEMESTER)
-        print timetable
+        timetable = querySolverBV.solveQuery(numMods, compMods, optMods, options, semester = SEMESTER)
         self.assertTrue(self.calendarUtils.scheduleValid(timetable))
         freedays = self.calendarUtils.gotFreeDay(timetable)
         print freedays
@@ -94,9 +81,9 @@ class TestQueryParserBV(unittest.TestCase):
         self.assertTrue(self.calendarUtils.scheduleValid(timetable))
         freedays = self.calendarUtils.gotFreeDay(timetable)
         print freedays
-        isMondayFree = 'Even Monday' in freedays and 'Odd Monday' in freedays
         isTuesdayFree = 'Even Tuesday' in freedays and 'Odd Tuesday' in freedays
-        self.assertTrue(isMondayFree or isTuesdayFree)
+        isWednesdayFree = 'Even Wednesday' in freedays and 'Odd Wednesday' in freedays
+        self.assertTrue(isWednesdayFree or isTuesdayFree)
 
 
 if __name__ == '__main__':

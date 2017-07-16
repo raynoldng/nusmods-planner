@@ -130,8 +130,10 @@ def freedayMod(numFreedays, freedays = []):
     '''
     weekdays = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
     freedayNumbers = [weekdays[day] for day in freedays]
+    # add the specified weekdays first
     lessonSlots1 = {"freeday-%s" % i : [(str(d), freeDay(d)) for d in freedayNumbers]
                     for i in range(0, len(freedays))}
+    # remaining freedays are symbolic
     lessonSlots2 = {"freeday-%s" % i : [(str(d), freeDay(d)) for d in range(5)]
                     for i in range(len(freedays), numFreedays)}
     lessonSlots1.update(lessonSlots2)
