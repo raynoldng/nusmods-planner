@@ -145,4 +145,5 @@ def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}, semes
     if debug:
         return [s, modlst]
     else:
-        return [toSMT2Benchmark(s), modsListToLessonMapping(compmods + optmods)]
+        modLessonMapping = [[i[0], {k: [j[0] for j in v] for k, v in i[1].iteritems()}] for i in modlst]
+        return [toSMT2Benchmark(s), modLessonMapping]
