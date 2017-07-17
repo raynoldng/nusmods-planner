@@ -85,6 +85,21 @@ class TestQueryParserBV(unittest.TestCase):
         isWednesdayFree = 'Even Wednesday' in freedays and 'Odd Wednesday' in freedays
         self.assertTrue(isWednesdayFree or isTuesdayFree)
 
+    def testUndefinedTimetable(self):
+        ''' some slots are undefined
+        '''
+        print 'undefinedTimetable'
+        numMods = 4
+        compMods = []
+        optMods = ['GEQ1000', 'MA1101R', 'GER1000', 'MA1100', 'CS1010', 'CS1231']
+        options = {'freeday': True, 'possibleFreedays': []}
+        timetable = querySolverBV.solveQuery(numMods, compMods, optMods, options, semester = SEMESTER)
+        print 'testFreedayFromSubset'
+        print timetable
+        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
+        freedays = self.calendarUtils.gotFreeDay(timetable)
+        print freedays
+        self.assertTrue(len(freedays) >= 2)
 
 if __name__ == '__main__':
     unittest.main()
