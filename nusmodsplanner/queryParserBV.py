@@ -93,9 +93,15 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
 
     if 'lockedLessonSlots' in options:
         lockedSlots = options['lockedLessonSlots']
+        # TODO error is at client side, fix it
+        lockedSlots = filter(lambda x: x.split('_')[0] in compmodsstr, lockedSlots)
+
         for lessonSlot in lockedSlots:
            tokens = lessonSlot.split('_');
            moduleCode, lessonType, slot = tokens
+           # print "%s %s %s" % (moduleCode, lessonType, slot)
+           # print compmodsstr
+           # print filter(lambda x: x[0] == moduleCode, compmodsstr)
            lessonSlots = filter(lambda x: x[0] == moduleCode, compmodsstr)[0][1][lessonType]
            lessonSlotIndex = [i for i, slotToTimes in enumerate(lessonSlots)
                               if slotToTimes[0] == slot][0]

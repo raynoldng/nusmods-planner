@@ -113,5 +113,18 @@ class TestQueryParserBV(unittest.TestCase):
         print timetable
         self.assertTrue(self.calendarUtils.scheduleValid(timetable))
 
+    def testIndexOutOfRange(self):
+        '''Returns out of index out of range error
+args to python: {"semester":"AY1718S1","numToTake":"6","compMods":["CS2103T","MA3269","ES2660","CS2105","GEH1036","CS2010"],"optMods":[],"options":{"freeday":true,"possibleFreedays":[],"lockedLessonSlots":["CS2101_Sectional Teaching_6","CS2103T_Tutorial_T6"]}}
+        '''
+        numMods = 6
+        optMods = []
+        compMods = ['CG1111', 'EN1101E', 'GE1101E', 'LA4203', 'MA1100', 'PC1141']
+        options = {"freeday":True,"possibleFreedays":[],"lockedLessonSlots":["CS2101_Sectional Teaching_6","CS2103T_Tutorial_T6"]}
+        timetable = querySolverBV.solveQuery(numMods, compMods, optMods, options, semester = SEMESTER)
+        print timetable
+        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
+
+
 if __name__ == '__main__':
     unittest.main()
