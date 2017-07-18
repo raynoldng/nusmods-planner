@@ -101,5 +101,17 @@ class TestQueryParserBV(unittest.TestCase):
         print freedays
         self.assertTrue(len(freedays) >= 2)
 
+    def testWeekendLessons(self):
+        ''' Edge case where the module has weekend lessons (e.g. CG1111)
+        '''
+        numMods = 5
+        optMods = ['CG1111', 'EN1101E', 'GE1101E', 'LA4203', 'MA1100', 'PC1141']
+        compMods = []
+        options = {}
+        timetable = querySolverBV.solveQuery(numMods, compMods, optMods, options, semester = SEMESTER)
+        print 'testFreedayFromSubset'
+        print timetable
+        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
+
 if __name__ == '__main__':
     unittest.main()

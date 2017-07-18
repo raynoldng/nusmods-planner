@@ -54,6 +54,7 @@ def modsListToLessonMapping(transformedModsLst):
 def timeList(weektext, daytext, starttime, endtime):
     """Returns list of discrete timeslots based on hour-based indexing in a
     fortnight used for z3's distinct query. 0-119 first week, 120-239 second week. 24 hours in a day
+    If it is a weekend, return empty list
 
     :param weektext: Odd/Even Week
     :param daytext: day of the week
@@ -63,6 +64,8 @@ def timeList(weektext, daytext, starttime, endtime):
     :rtype: list
 
     """
+    if daytext == 'Saturday' or daytext == 'Sunday':
+        return []
     weekdays = {"Monday": 0, "Tuesday": 1, "Wednesday": 2, "Thursday": 3, "Friday": 4}
     ofst = weekdays[daytext]*24
     lst = [i+ofst for i in range(int(starttime)/100, int(endtime)/100)]
