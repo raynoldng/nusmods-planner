@@ -209,6 +209,11 @@ class CalendarUtils:
         modJSON = self.queryAndTransform(mod)[1]
         return modJSON[lessonType][slot]
 
+    def getHoursFromSchedule(self, schedule):
+        hours = [self.getHours(s) for s in schedule]
+        combinedHours = list(itertools.chain.from_iterable(hours))
+        return combinedHours
+
     def scheduleValid(self, schedule):
         """Returns true if schedule is valid, one of each lesson type and no clash
 
@@ -236,9 +241,7 @@ class CalendarUtils:
         if len(allLessonTypes.symmetric_difference(scheduleLessonType)) != 0:
             return False
 
-        # check that all hours are unique
-        hours = [self.getHours(s) for s in schedule]
-        combinedHours = list(itertools.chain.from_iterable(hours))
+        combinedHours = self.getHoursFromSchedule(schedule)
         return len(combinedHours) == len(Set(combinedHours))
 
     def checkNoLessonsBefore(self, schedule, hour):
