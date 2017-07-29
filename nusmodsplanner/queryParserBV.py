@@ -122,7 +122,9 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
         for i in hours:
             solver.add(M[i] >= FREEDAY_OFFSET)
 
-
+    if "lunchBreak" in options:
+        for i in range(10):
+            solver.add(Or([M[24*i + h] >= FREEDAY_OFFSET for h in LUNCH_HOURS]))
 
 def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):
     v = (Ast * 0)()
