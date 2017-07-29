@@ -20,36 +20,59 @@ class TestQueryParserBV(unittest.TestCase):
     def setUp(self):
         self.calendarUtils = mod_utils.CalendarUtils(SEMESTER)
 
+    def checkTimetable(self, timetable, options = {}):
+        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
+        # NOTE deprecated
+        if 'numFreedays' in options and options['numFreedays'] > 0:
+            freedaysToAssert = []
+            for d in options['freedays']:
+                freedaysToAssert.append('%s %s' % ('Odd', d))
+                freedaysToAssert.append('%s %s' % ('Even', d))
+            freedaysInTimetable = self.calendarUtils.gotFreeDay(timetable)
+            for d in freedaysToAssert:
+                self.assertTrue(d in freedaysInTimetable)
+
+        if 'freeday' in options and options['freeday']:
+            freedays = self.calendarUtils.gotFreeday(timetable)
+            self.assertTrue(len(freedays) > 0)
+
+            if 'possibleFreedays' in options:
+                possibleFreedays = options['possibleFreedays']
+                gotDesiredFreeday = False
+                for day in possibleFreedays:
+                    if 'Even %s' % day in freedays and 'Odd %s' % day in freedays:
+                        gotDesiredFreeday = True
+                        break
+                self.assertTrue(gotDesiredFreeday)
+
+        if 'lockedLessonSlots' in options:
+            lockedLessons = options['lockedLessonSlots']
+            for lesson in lockedLessons:
+                self.assertTrue(lesson in timetable)
+
+
     def testSpecificAndNonSpecificFreedays(self):
         ''' Verify that timetable contains the specified free day and another soft free day
+        NOTE numFreedays is deprecated, not used in live version for now
         '''
         compMods = ['CS2100', 'CS1010', 'GEQ1000', 'GER1000']
         optMods = []
         options = {'numFreedays': 2, 'freedays': ['Tuesday']}
         timetable = querySolverBV.solveQuery(4, compMods, [], options, semester = SEMESTER)
-        print timetable
-        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
-        freedays = self.calendarUtils.gotFreeDay(timetable)
-        print freedays
-        for d in ['Even Tuesday', 'Odd Tuesday']:
-            self.assertTrue(d in freedays)
-        # assert that we get another free day on top of the indicated Tuesday
-        self.assertTrue(len(self.calendarUtils.gotFreeDay(timetable)) > 2)
+
+        self.checkTimetable(timetable)
 
     def testSpecificFreedayandNoLessonsBefore(self):
         ''' Live version returned incorrectly unsat
+        NOTE numFreedays is deprecated, not used in live version for now
         '''
         compMods = ['GEQ1000', 'PS2203', 'PS2237', 'PS3271', 'SN1101E']
         optMods = []
         options = {'numFreedays': 2, 'freedays': ['Monday', 'Tuesday'], 'noLessonsBefore': 8}
         numMods = 5
-
         timetable = querySolverBV.solveQuery(numMods, compMods, optMods, options, semester = SEMESTER)
-        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
-        freedays = self.calendarUtils.gotFreeDay(timetable)
-        print freedays
-        for d in ['Even Monday', 'Odd Monday', 'Even Tuesday', 'Odd Tuesday']:
-            self.assertTrue(d in freedays)
+
+        self.checkTimetable(timetable)
 
     def testFreeday(self):
         ''' Return a timetable that has at least one free day
@@ -60,12 +83,8 @@ class TestQueryParserBV(unittest.TestCase):
         numMods = 4
         options = {'freeday': True}
         timetable = querySolverBV.solveQuery(numMods, compMods, [], options, semester = SEMESTER)
-        print 'testFreeday'
-        print timetable
-        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
-        freedays = self.calendarUtils.gotFreeDay(timetable)
-        print freedays
-        self.assertTrue(len(freedays) >= 2)
+
+        self.checkTimetable(timetable)
 
     def testFreedayFromSubset(self):
         ''' Return a timetable that has at least one free day from specified weekdays
@@ -76,14 +95,8 @@ class TestQueryParserBV(unittest.TestCase):
         numMods = 4
         options = {'freeday': True, 'possibleFreedays': ['Tuesday', 'Wednesday']}
         timetable = querySolverBV.solveQuery(numMods, compMods, [], options, semester = SEMESTER)
-        print 'testFreedayFromSubset'
-        print timetable
-        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
-        freedays = self.calendarUtils.gotFreeDay(timetable)
-        print freedays
-        isTuesdayFree = 'Even Tuesday' in freedays and 'Odd Tuesday' in freedays
-        isWednesdayFree = 'Even Wednesday' in freedays and 'Odd Wednesday' in freedays
-        self.assertTrue(isWednesdayFree or isTuesdayFree)
+
+        self.checkTimetable(timetable)
 
     def testUndefinedTimetable(self):
         ''' some slots are undefined
@@ -94,12 +107,8 @@ class TestQueryParserBV(unittest.TestCase):
         optMods = ['GEQ1000', 'MA1101R', 'GER1000', 'MA1100', 'CS1010', 'CS1231']
         options = {'freeday': True, 'possibleFreedays': []}
         timetable = querySolverBV.solveQuery(numMods, compMods, optMods, options, semester = SEMESTER)
-        print 'testFreedayFromSubset'
-        print timetable
-        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
-        freedays = self.calendarUtils.gotFreeDay(timetable)
-        print freedays
-        self.assertTrue(len(freedays) >= 2)
+
+        self.checkTimetable(timetable)
 
     def testWeekendLessons(self):
         ''' Edge case where the module has weekend lessons (e.g. CG1111)
@@ -109,9 +118,8 @@ class TestQueryParserBV(unittest.TestCase):
         compMods = []
         options = {}
         timetable = querySolverBV.solveQuery(numMods, compMods, optMods, options, semester = SEMESTER)
-        print 'testFreedayFromSubset'
-        print timetable
-        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
+
+        self.checkTimetable(timetable)
 
     def testIndexOutOfRange(self):
         '''Returns out of index out of range error
@@ -122,9 +130,8 @@ args to python: {"semester":"AY1718S1","numToTake":"6","compMods":["CS2103T","MA
         compMods = ['CG1111', 'EN1101E', 'GE1101E', 'LA4203', 'MA1100', 'PC1141']
         options = {"freeday":True,"possibleFreedays":[],"lockedLessonSlots":["CS2101_Sectional Teaching_6","CS2103T_Tutorial_T6"]}
         timetable = querySolverBV.solveQuery(numMods, compMods, optMods, options, semester = SEMESTER)
-        print timetable
-        self.assertTrue(self.calendarUtils.scheduleValid(timetable))
 
+        self.checkTimetable(timetable)
 
 if __name__ == '__main__':
     unittest.main()
