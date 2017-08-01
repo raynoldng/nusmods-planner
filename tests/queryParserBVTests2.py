@@ -136,6 +136,25 @@ class TestQueryParserBV(unittest.TestCase):
 
         self.checkTimetable(timetable, options)
 
+    def testLockedLessons(self):
+        ''' Timetable returned should include specified locked lesson slot
+        '''
+        numMods = 6
+        optMods = []
+        compMods = ['UTC2700', 'CS3230', 'CS2103T', 'CS2106', 'ST2132']
+
+    def testLockedLessons(self):
+        ''' Timetable returned should include specified locked lesson slot
+        '''
+        numMods = 6
+        optMods = []
+        compMods = ['UTC2700', 'CS3230', 'CS2103T', 'CS2106', 'ST2132', 'CS2101']
+        options = {'lockedLessonSlots': ['CS2101_Sectional Teaching_6']}
+        timetable = querySolverBV.solveQuery(numMods, compMods, optMods, options, semester = SEMESTER)
+
+        print timetable
+        self.checkTimetable(timetable, options)
+
 if __name__ == '__main__':
     unittest.main()
 # TODO add options to checkTimetable
