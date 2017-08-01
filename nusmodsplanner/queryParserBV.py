@@ -11,19 +11,29 @@ import random
 from mod_utils import CalendarUtils
 from mod_utils import *
 
+numDays = 10
+FREEDAY_OFFSET = 1000 # required to resolve noLessonsBefore/After conflict
 
-def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver(),
-                   options = {}):
-    FREEDAY_OFFSET = 1000 # required to resolve noLessonsBefore/After conflict
+def parseZ3Queryv4(numToTake, compMods = [], optMods = [], solver = Solver(),
+                   options = {}, semester = 'AY1617S2'):
+    modUtils = CalendarUtils(semester)
+
     timetable = []
     selection = []
 
+    compModsMapping = [transformMod(modUtils.query(m)) for m in compMods]
+    compModsMapping = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in compModsMapping]
+
+    optModsMapping = [transformMod(modUtils.query(m)) for m in optMods]
+    optModsMapping = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in optModsMapping]
+
+    # TODO migrate logic to function
     if 'freeday' in options and options['freeday']:
         if 'possibleFreedays' in options and len(options['possibleFreedays']) > 0:
             possibleFreedays = options['possibleFreedays']
         else:
             possibleFreedays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-        compmodsstr.insert(0,ModWithFullDays(possibleFreedays))
+        compModsMapping.insert(0, ModWithFullDays(possibleFreedays))
         numToTake += 1
 
     # WARNING DEPRECATED
@@ -33,19 +43,19 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
             freedays = options["freedays"]
         else:
             freedays = []
-        compmodsstr.insert(0,freedayMod(numFreedays, freedays))
+        compModsMapping.insert(0,freedayMod(numFreedays, freedays))
         numToTake += 1
 
-    complen = len(compmodsstr)
-    mods = compmodsstr + optmodsstr
-    numMods = len(mods)
+    numCompMods = len(compModsMapping)
+    modsMapping = compModsMapping + optModsMapping
+    numMods = len(modsMapping)
 
     X = [BitVec("x_%s" % i, 16) for i in range(numToTake)] # creates indicators
                                                            # determining which
                                                            # modules we try
 
 
-    solver.add([X[i]==i for i in range(complen)])
+    solver.add([X[i]==i for i in range(numCompMods)])
     solver.add([X[i]<X[i+1] for i in range(numToTake-1)])
     solver.add(X[0] >= 0)
     solver.add(X[numToTake-1] < numMods)
@@ -54,11 +64,7 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
                                                      # we are taking during
                                                      # each hour
 
-    if "lockedLessonSlots" in options:
-        lockedLessonsSlots = options['lockedLessonSlots']
-        lockedLessonMapping = {l[:l.rindex('_')]: l  for l in lockedLessonsSlots}
-
-    for modIndex, mod in enumerate(mods):
+    for modIndex, mod in enumerate(modsMapping):
         moduleCode = mod[0]
         constraints = []
         selected = Or([X[i] == modIndex for i in range(numToTake)]) #is this mod selected
@@ -87,44 +93,53 @@ def parseZ3Queryv4(numToTake, compmodsstr = [], optmodsstr = [], solver = Solver
 
         solver.add(constraints)
 
-    if "nobacktoback" in options and options["nobacktoback"]:
-        for i in range(239):
-            solver.add(Or(M[i] == -1, M[i+1] == -1, M[i] == M[i+1]))
-
+    # add all of the option related constraints
     if 'lockedLessonSlots' in options:
-        lockedSlots = options['lockedLessonSlots']
-        # TODO error is at client side, fix it
-        lockedSlots = filter(lambda x: x.split('_')[0] in compmodsstr, lockedSlots)
+        addLockedLessons(solver, modsMapping, options['lockedLessonSlots'], compMods)
+    if 'noLessonsBefore' in options:
+        addNoLessonsBefore(solver, options['noLessonsBefore'], M)
+    if 'noLessonsAfter' in options:
+        addNoLessonsBefore(solver, options['noLessonsAfter'], M)
+    if 'lunchBreak' in options and options['lunchBreak']:
+        addLunchBreak(solver, M)
 
-        for lessonSlot in lockedSlots:
-           tokens = lessonSlot.split('_');
-           moduleCode, lessonType, slot = tokens
-           # print "%s %s %s" % (moduleCode, lessonType, slot)
-           # print compmodsstr
-           # print filter(lambda x: x[0] == moduleCode, compmodsstr)
-           lessonSlots = filter(lambda x: x[0] == moduleCode, compmodsstr)[0][1][lessonType]
-           lessonSlotIndex = [i for i, slotToTimes in enumerate(lessonSlots)
-                              if slotToTimes[0] == slot][0]
-           solver.add(BitVec('%s_%s' % (moduleCode, lessonType), 16) == lessonSlotIndex)
+    return [solver, modsMapping]
 
-    '''
-    To implement no lesson before/after, assert that the venueImplicant is above FREEDAY_OFFSET,
-    there is no way an actual module lesson will have a venue implicant above FREEDAY_OFFSET
-    This prevents conflicts between asserting a freeday and no lessons before/after
-    '''
-    if "noLessonsBefore" in options:
-        hours = hoursBefore(options['noLessonsBefore'])
-        for i in hours:
-            solver.add(M[i] >= FREEDAY_OFFSET)
 
-    if "noLessonsAfter" in options:
-        hours = hoursAfter(options['noLessonsAfter'])
-        for i in hours:
-            solver.add(M[i] >= FREEDAY_OFFSET)
+def addLockedLessons(solver, modMapping, lockedLessonSlots, compMods):
+    # additional check, locked lessons might be artifacts from client side
+    lockedLessonSlots = [slot for slot in lockedLessonSlots if slot.split('_')[0] in compMods]
 
-    if "lunchBreak" in options:
-        for i in range(10):
-            solver.add(Or([M[24*i + h] >= FREEDAY_OFFSET for h in LUNCH_HOURS]))
+    for lessonSlot in lockedLessonSlots:
+        # for each locked lesson slot, find its corresponding slot index in the modsMapping
+        # and assert that modules_lesson variable is that index
+        tokens = lessonSlot.split('_');
+        moduleCode, lessonType, slot = tokens
+
+        lessonSlots = filter(lambda modMap: modMap[0] == moduleCode, modMapping)
+        assert len(lessonSlots) == 1
+        lessonSlots = lessonSlots[0][1][lessonType]
+
+        slotIndex = [i for i, slotToHours in enumerate(lessonSlots) if slotToHours[0] == slot]
+        assert len(slotIndex) == 1
+        slotIndex = slotIndex[0]
+
+        solver.add(BitVec('%s_%s' % (moduleCode, lessonType), 16) == slotIndex)
+
+def addNoLessonsBefore(solver, time, M):
+    hours = hoursBefore(time)
+    for i in hours:
+        solver.add(M[i] >= FREEDAY_OFFSET)
+
+def addNoLessonsAfter(solver, time, M):
+    hours = hoursAfter(time)
+    for i in hours:
+        solver.add(M[i] >= FREEDAY_OFFSET)
+
+def addLunchBreak(solver, M):
+    for i in range(numDays):
+        solver.add(Or([M[24*i + h] >= FREEDAY_OFFSET for h in LUNCH_HOURS]))
+
 
 def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):
     v = (Ast * 0)()
@@ -137,21 +152,13 @@ def toSMT2Benchmark(f, status="unknown", name="benchmark", logic="QF_BV"):
     return Z3_benchmark_to_smtlib_string(f.ctx_ref(), name, logic,
                                          status, "", 0, v, f.as_ast())
 
-def parseQuery(numToTake, compmodsstr = [], optmodsstr = [], options = {}, semester = 'AY1617S2',
+def parseQuery(numToTake, compMods = [], optMods = [], options = {}, semester = 'AY1617S2',
     debug = False):
-    s = Solver()
-    modUtils = CalendarUtils(semester)
 
-    compmods = [transformMod(modUtils.query(m)) for m in compmodsstr]
-    optmods = [transformMod(modUtils.query(m)) for m in optmodsstr]
-    # transfomrs slotname to timing mappings into list of tuples (s,t) instead
-    complst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in compmods]
-    optlst = [[i[0], {k:v.items() for k,v in i[1].items()}] for i in optmods]
-    parseZ3Queryv4(numToTake, complst, optlst, s, options)
-    modlst = complst + optlst
-    # return toSMT2Benchmark(s)
+    solver, modsMapping = parseZ3Queryv4(numToTake, compMods, optMods, Solver(), options, semester)
+
     if debug:
-        return [s, modlst]
+        return [solver, modsMapping]
     else:
         modLessonMapping = [[i[0], {k: [j[0] for j in v] for k, v in i[1].iteritems()}] for i in modlst]
         return [toSMT2Benchmark(s), modLessonMapping]
