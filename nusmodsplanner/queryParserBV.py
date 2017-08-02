@@ -99,7 +99,7 @@ def parseZ3Queryv4(numToTake, compMods = [], optMods = [], solver = Solver(),
     if 'noLessonsBefore' in options:
         addNoLessonsBefore(solver, options['noLessonsBefore'], M)
     if 'noLessonsAfter' in options:
-        addNoLessonsBefore(solver, options['noLessonsAfter'], M)
+        addNoLessonsAfter(solver, options['noLessonsAfter'], M)
     if 'lunchBreak' in options and options['lunchBreak']:
         addLunchBreak(solver, M)
 
