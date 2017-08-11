@@ -7,6 +7,7 @@ Features:
 - free day planner
   - returns a timetable of provided modules that gives a free day
 - timetable planning from subset of provided modules
+- blocked hours, no lessons during indicated hours
 
 ## Getting Started
 
@@ -36,12 +37,7 @@ So far nothing doing, still run the python scripts
 
 ## Usage
 
-## Todo
-
-- [ ] restructure project
-- [ ] write tests
-- [ ] add documentation on the internal representation
-- [ ] hard and soft constraints for module planning
+TODO
 
 ## Authors
 
@@ -49,5 +45,6 @@ So far nothing doing, still run the python scripts
 - Raynold Ng
 
 ## License
+MIT License
 
 ## Acknowledgements

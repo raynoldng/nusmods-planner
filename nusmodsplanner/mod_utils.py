@@ -9,9 +9,7 @@ from collections import OrderedDict
 import random
 from definitions import ROOT_DIR, lessonTypeCodes, LOCAL_API_DIR
 from z3 import *
-
-
-LOCAL = True
+LUNCH_HOURS = [11, 12, 13]
 
 def lessonTypeToCode(lessonType):
     if "freeday" in lessonType:
@@ -35,6 +33,11 @@ def hoursAfter(x):
                       for i in range(0,5)]
     hours = [i for sublist in hours for i in sublist]
     return hours
+
+def lunchHoursInWeek():
+    LUNCH_HOURS = [11, 12, 13]
+    return [24 * day + h for day in range(10) for h in LUNCH_HOURS]
+
 def transformMod(modtuple):
         return (modtuple[0], splitIntoLessonTypes(modtuple[1]))
 
@@ -219,6 +222,11 @@ class CalendarUtils:
         modJSON = self.queryAndTransform(mod)[1]
         return modJSON[lessonType][slot]
 
+    def getHoursFromSchedule(self, schedule):
+        hours = [self.getHours(s) for s in schedule]
+        combinedHours = list(itertools.chain.from_iterable(hours))
+        return combinedHours
+
     def scheduleValid(self, schedule):
         """Returns true if schedule is valid, one of each lesson type and no clash
 
@@ -246,9 +254,7 @@ class CalendarUtils:
         if len(allLessonTypes.symmetric_difference(scheduleLessonType)) != 0:
             return False
 
-        # check that all hours are unique
-        hours = [self.getHours(s) for s in schedule]
-        combinedHours = list(itertools.chain.from_iterable(hours))
+        combinedHours = self.getHoursFromSchedule(schedule)
         return len(combinedHours) == len(Set(combinedHours))
 
     def checkNoLessonsBefore(self, schedule, hour):
