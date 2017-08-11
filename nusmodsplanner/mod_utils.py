@@ -7,9 +7,11 @@ import itertools
 import os
 from collections import OrderedDict
 import random
-from definitions import ROOT_DIR, lessonTypeCodes
+from definitions import ROOT_DIR, lessonTypeCodes, LOCAL_API_DIR
 from z3 import *
 
+
+LOCAL = True
 
 def lessonTypeToCode(lessonType):
     if "freeday" in lessonType:
@@ -145,22 +147,30 @@ def freedayMod(numFreedays, freedays = []):
 class CalendarUtils:
     ''' This class should only contain functions that require the timetable data
     '''
-    def __init__(self, semester = 'AY1718S1'):
+    def __init__(self, semester = 'AY1718S1', local = False):
         pathToData = os.path.join(ROOT_DIR, '../data/' + semester + '_timetable.json')
         self.BASE_URL = 'http://api.nusmods.com/20' + semester[2:4] + '-20' + semester[4:6] + '/' + \
         semester[-1] + '/modules/'
-        # self._dict = json.load(open(pathToData))
-
+        self.LOCAL_BASE_URL = LOCAL_API_DIR + '/20' + semester[2:4] + '-20' + semester[4:6] + '/' + \
+        semester[-1] + '/modules/'
+        self.local = local
     
     # Sample API call:
     # http://api.nusmods.com/2016-2017/1/modules/ST2131/timetable.json
     # returns tuple of (ModuleCode, [{Lessons for each type}])
     def query(self, code):
         code = code.upper() # codes are in upper case
-        # # if in DEV mode then pull everything from local sources
-        # if code in self._dict:
-        #     return (code, self._dict[code])
 
+        # If in LOCAL mode then pull everything from local sources
+        try:
+            if self.local:
+                url = self.LOCAL_BASE_URL + code.upper() + '.json'
+                mod = json.load(open(url))
+                return (code, mod['Timetable'])
+        except IOError:
+            print "url: " + url + " not found"
+
+        # if all fails default to API
         url = self.BASE_URL + code.upper() + '/timetable.json'
         r = requests.get(self.BASE_URL + code.upper() + '/timetable.json')
         r = r.json()
